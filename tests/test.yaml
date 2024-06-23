@@ -1,0 +1,4 @@
+test:
+  example: [a,b,c,d]
+  thing:
+    example: 42

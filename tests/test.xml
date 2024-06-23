@@ -1,0 +1,14 @@
+# .example.person[]
+<example>
+<person>
+    <name>John Doe</name>
+    <age>30</age>
+    <address>123 Main St</address>
+</person>
+<person>
+    <name>Jane Doe</name>
+    <age>30</age>
+    <address>123 Main St</address>
+</person>
+</example>
+

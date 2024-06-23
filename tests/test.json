@@ -1,0 +1,28 @@
+{
+  "name": "John Doe",
+  "age": 30,
+  "email": "john.doe@example.com",
+  "address": {
+    "street": "123 Main St",
+    "city": "Anytown",
+    "state": "CA",
+    "zipcode": "12345"
+  },
+  "phone": {
+    "home": "555-1234",
+    "work": "555-5678"
+  },
+  "children": [
+    {
+      "name": "Alice",
+      "age": 5
+    },
+    {
+      "name": "Bob",
+      "age": 8
+    }
+  ],
+  "tags": ["tag1", "tag2", "tag3"],
+  "active": true
+}
+
