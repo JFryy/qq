@@ -1,6 +1,6 @@
 # qq
 
-`qq` is a interoperable configuration format transcoder with `jq` querying ability powered by gojq. `qq` is multi modal, and can be used as a replacement for `jq` or be interacted with via a repl with autocomplete and realtime rendering preview for building queries.
+`qq` is a interoperable configuration format transcoder with `jq` query syntax powered by `gojq`. `qq` is multi modal, and can be used as a replacement for `jq` or be interacted with via a repl with autocomplete and realtime rendering preview for building queries.
 
 ## Usage
 Basic usage:
