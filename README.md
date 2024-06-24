@@ -59,10 +59,9 @@ Download at releases [here](https://github.com/JFryy/qq/releases).
 
 
 ## Contributions
-Contributions are welcome to `qq`, especially for upkeep/optimization/addition of new encodings. For ideas on contributions please refer to [TODO](https://github.com/JFryy/qq/blob/main/docs/TODO.md)
+All contributions are welcome to `qq`, especially for upkeep/optimization/addition of new encodings. For ideas on contributions [please refer to the todo docs](https://github.com/JFryy/qq/blob/main/docs/TODO.md) or make an issue/PR for a suggestion if there's something that's wanted or fixes.
 
 ## Thanks and Acknowledgements / Related Projects
 * [gojq](https://github.com/itchyny/gojq): `gojq` is a pure Go implementation of jq. It is used to power the query engine of qq.
 * [fq](https://github.com/wader/fq) : fq is a `jq` like tool for querying a wide array of binary formats.
-* A lot of encoding modules 🍻
-
+* Many encoding modules 🍻
