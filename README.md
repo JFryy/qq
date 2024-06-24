@@ -35,7 +35,7 @@ Download at releases [here](https://github.com/JFryy/qq/releases).
 * support a wide range of configuration formats and transform them interchangeably between eachother.
 * quick and comprehensive querying of configuration formats without needing a pipeline of dedicated tools.
 * provide a fun to use interactive mode for building queries with autocomplete and realtime rendering preview.
-* `qq` is broad, but focuses on performance of encodings (gojq is doing a lot of work), execution is often times faster than most any "jq but for X configuration format". `qq` performs similarly to benchmarks of `jq` running on `JSON` itself in all covered formats.
+* `qq` is broad, but focuses on performance of encodings (but mostly `gojq` is very fast), execution is often times faster than most any "jq but for `${x}` configuration format"-type tools. `qq` performs similarly to benchmarks of `jq` running on `JSON` itself in most covered formats.
 
 
 ## Supported formats
