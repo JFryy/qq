@@ -7,13 +7,13 @@ Basic usage:
 <a href="https://asciinema.org/a/665317" target="_blank"><img src="https://asciinema.org/a/665317.svg" /></a>
 
 ```sh
-# query file and infer format
-qq . foo.bar file.xml
+# query file and infer format from extension
+qq .foo.bar file.xml
 
-# query file with explicit format, transcode to another format
-cat file.xml | qq . foo.bar -i xml -o hcl
+# query file through pipe, transcode xml -> terraform (it can be done but it probably shouldn't)
+cat file.xml | qq '.bar.foo[].meep' -i xml -o tf
 
-# interactive query builder
+# interactive query builder mode on target file
 qq . file.toml --interactive
 ```
 
@@ -28,13 +28,14 @@ Download at releases [here](https://github.com/JFryy/qq/releases).
 
 ## Background
 
-`qq` is heavily inspired by `fq` and `jq`. `jq` is a powerful and succinct query tool, sometimes I would find myself needing to use another bespoke tool for another format than json, whether its something dedicated with json query built in or a simple converter from one configuration format to json to pipe into jq. `qq` aims for the lofty goal to be the only utility needed for majority of interaction with structured formats in the terminal. It combines transcoding configuration formats from one to another, the power of `jq`, and `an interactive repl (with automcomplete)` for building more advanced queries. Many thanks to the authors of the libraries used in this project, especially the `jq` and `gojq` authors and the authors of the many encoding libraries used in this project.
+`qq` is inspired by `fq` and `jq`. `jq` is a powerful and succinct query tool, sometimes I would find myself needing to use another bespoke tool for another format than json, whether its something dedicated with json query built in or a simple converter from one configuration format to json to pipe into jq. `qq` aims to be the only utility needed for most interaction with structured formats in the terminal. It can transcode configuration formats interchangeably between one-another with the power of `jq` and it has an `an interactive repl (with automcomplete)` to boot so you can have an interactive experience when building queries optionally. Many thanks to the authors of the libraries used in this project, especially `jq`, `gojq`, and `fq` for direct usage or inspiration for the project.
 
 
-## Goals
+## Features
 * support a wide range of configuration formats and transform them interchangeably between eachother.
 * quick and comprehensive querying of configuration formats without needing a pipeline of dedicated tools.
 * provide a fun to use interactive mode for building queries with autocomplete and realtime rendering preview.
+* `qq` is broad, but focuses on performance of encodings (gojq is doing a lot of work), execution is often times faster than most any "jq but for X configuration format". `qq` performs similarly to benchmarks of `jq` running on `JSON` itself in all covered formats.
 
 
 ## Supported formats
@@ -58,4 +59,5 @@ Download at releases [here](https://github.com/JFryy/qq/releases).
 ## Thanks and Acknowledgements / Related Projects
 * [gojq](https://github.com/itchyny/gojq): `gojq` is a pure Go implementation of jq. It is used to power the query engine of qq.
 * [fq](https://github.com/wader/fq) : fq is a `jq` like tool for querying a wide array of binary formats.
+* A lot of encoding modules 🍻
 
