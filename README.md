@@ -56,6 +56,7 @@ Download at releases [here](https://github.com/JFryy/qq/releases).
 ## Caveats
 * `qq` is not a full `jq`/`*q` replacement and comes with idiosyncrasies from the underlying `gojq` library.
 * the encoders and decoders are not perfect and may not be able to handle all edge cases.
+* `qq` is under active development and more codecs are intended to be supported along with improvements to `interactive mode`.
 
 
 ## Contributions
