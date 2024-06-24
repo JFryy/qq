@@ -39,6 +39,7 @@ Download at releases [here](https://github.com/JFryy/qq/releases).
 
 
 ## Supported formats
+Note: these unsupported formats are on a roadmap for inclusion.
 | Format      | Input          | Output         |
 |-------------|----------------|----------------|
 | JSON        | ✅ Supported   | ✅ Supported   |
