@@ -50,6 +50,7 @@ Download at releases [here](https://github.com/JFryy/qq/releases).
 | TF          | ✅ Supported   | ✅ Supported   |
 | CSV         | ✅ Supported   | ❌ Not Supported |
 | Protobuf    | ❌ Not Supported | ❌ Not Supported |
+| HTML        | ❌ Not Supported | ❌ Not Supported |
 
 
 ## Caveats
