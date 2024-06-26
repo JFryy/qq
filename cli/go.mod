@@ -1,10 +1,8 @@
-module cli
+module github.com/JFryy/cli
 
 go 1.22.4
 
 require (
-	github.com/JFryy/qq/codec v0.0.0
-	github.com/JFryy/qq/internal/tui v0.0.0
 	github.com/itchyny/gojq v0.12.16
 	github.com/spf13/cobra v1.8.1
 )

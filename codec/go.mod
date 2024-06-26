@@ -1,10 +1,9 @@
-module codec
+module github.com/JFryy/qq/codec
 
 go 1.22.4
 
 require (
 	github.com/BurntSushi/toml v1.4.0
-	github.com/JFryy/qq/codec v0.0.0
 	github.com/alecthomas/chroma v0.10.0
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/goccy/go-json v0.10.3
