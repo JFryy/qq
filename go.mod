@@ -3,14 +3,20 @@ module github.com/JFryy/qq
 go 1.22.4
 
 require (
+	github.com/JFryy/qq/cli v0.0.0-20240626034628-3e21f7f0cea6
+	github.com/JFryy/qq/codec v0.0.0-20240626034628-3e21f7f0cea6
+)
+
+require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/JFryy/qq/internal/tui v0.0.0-20240626033059-fa396add9f28 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/bubbles v0.18.0 // indirect
-	github.com/charmbracelet/bubbletea v0.26.5 // indirect
+	github.com/charmbracelet/bubbletea v0.26.6 // indirect
 	github.com/charmbracelet/lipgloss v0.11.0 // indirect
 	github.com/charmbracelet/x/ansi v0.1.2 // indirect
 	github.com/charmbracelet/x/input v0.1.2 // indirect
