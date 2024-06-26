@@ -3,6 +3,7 @@ module github.com/JFryy/qq/internal/tui
 go 1.22.4
 
 require (
+	github.com/JFryy/qq/codec v0.0.0-20240626033059-fa396add9f28
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.26.5
 	github.com/charmbracelet/lipgloss v0.11.0

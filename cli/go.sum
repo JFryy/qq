@@ -1,5 +1,9 @@
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
+github.com/JFryy/qq/codec v0.0.0-20240626033059-fa396add9f28 h1:wFbe/0NS0RsHEShjuOc2qfFvY0Mb4SfANCtNYxMihz4=
+github.com/JFryy/qq/codec v0.0.0-20240626033059-fa396add9f28/go.mod h1:1EK/NkTX3kh8uY6dA/ab5fmntXTSrtK9n6Oh6FNV0DI=
+github.com/JFryy/qq/internal/tui v0.0.0-20240626033059-fa396add9f28 h1:Ig16cOuxRBhmMKKgg8zge3DaXku9IXiBcBSHO5r3D+A=
+github.com/JFryy/qq/internal/tui v0.0.0-20240626033059-fa396add9f28/go.mod h1:Ly+dYmqoafiYbHisN05H7rfQPpMoW095T7ymfF1njes=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
 github.com/agext/levenshtein v1.2.3/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/alecthomas/chroma v0.10.0 h1:7XDcGkCQopCNKjZHfYrNLraA+M7e0fMiJ/Mfikbfjek=
