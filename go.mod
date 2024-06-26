@@ -2,14 +2,6 @@ module github.com/JFryy/qq
 
 go 1.22.4
 
-replace github.com/JFryy/qq/cli v0.0.0 => ./cli
-
-replace github.com/JFryy/qq/codec v0.0.0 => ./codec
-
-replace github.com/JFryy/qq/internal/tui v0.0.0 => ./internal/tui
-
-replace github.com/JFryy/qq v0.0.0 => .
-
 require (
 	github.com/JFryy/qq/cli v0.0.0
 	github.com/JFryy/qq/codec v0.0.0

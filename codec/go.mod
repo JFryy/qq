@@ -2,8 +2,6 @@ module codec
 
 go 1.22.4
 
-replace github.com/JFryy/qq/codec v0.0.0 => ./
-
 require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/JFryy/qq/codec v0.0.0

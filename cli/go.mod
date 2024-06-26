@@ -1,9 +1,5 @@
 module cli
 
-replace github.com/JFryy/qq/internal/tui v0.0.0 => ../internal/tui
-
-replace github.com/JFryy/qq/codec v0.0.0 => ../codec
-
 go 1.22.4
 
 require (

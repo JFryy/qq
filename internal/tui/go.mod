@@ -2,8 +2,6 @@ module tui
 
 go 1.22.4
 
-replace github.com/JFryy/qq/codec v0.0.0 => ../../codec
-
 require (
 	github.com/JFryy/qq/codec v0.0.0
 	github.com/charmbracelet/bubbles v0.18.0
