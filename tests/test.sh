@@ -1,5 +1,10 @@
 set -e
 
+if [ -z $(which jq) ]; then
+    echo "jq is not installed. Please install jq."
+    exit 1
+fi
+
 print() {
     case $1 in
         red)
@@ -18,9 +23,11 @@ print() {
 }
 
 
-for i in $(ls -1 tests/* | grep -v '.sh'); do
+extensions=$(ls -1 tests/* | grep -Ev '.sh|csv')
+for i in ${extensions}; do
     echo "Testing $i"
-    for extension in json yaml toml xml tf hcl; do
+    for f in ${extensions}; do
+        extension=$(echo $f | cut -d. -f2)
         input=$(echo $i | cut -d. -f2)
         # csv is not supported for toml and xml output
         case $input in
@@ -45,7 +52,19 @@ for i in $(ls -1 tests/* | grep -v '.sh'); do
         print "yellow" "Testing case: qq $case $i"
         print "" "============================================"
         echo $test_cases
-        bin/qq ${case} $i
+        cat $i | grep -v \# | bin/qq ${case} $i
     done
 done
 
+# conversions to jq and back
+previous_ext="json"
+for file in ${extensions}; do
+    print "" "============================================"
+    print "" "Executing: cat tests/test.xml | jq . | bin/qq -o $extension"
+    print "" "============================================"
+    bin/qq tests/test.xml | jq . | bin/qq -o $previous_ext
+    print "green" "============================================"
+    print "green" "Success."
+    print "green" "============================================"
+    previous_ext=$(echo $file | cut -d. -f2)
+done

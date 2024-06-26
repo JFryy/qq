@@ -12,6 +12,7 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/goccy/go-yaml v1.11.3
 	github.com/hashicorp/hcl/v2 v2.21.0
+	github.com/mattn/go-isatty v0.0.20
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tmccombs/hcl2json v0.6.3
@@ -27,7 +28,6 @@ require (
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect

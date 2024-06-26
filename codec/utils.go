@@ -3,12 +3,13 @@ package codec
 import (
 	"bytes"
 	"fmt"
-	"strings"
-
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
+	"github.com/mattn/go-isatty"
+	"os"
+	"strings"
 )
 
 func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
@@ -26,6 +27,10 @@ func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 		default:
 			return strings.ReplaceAll(s, "\"", ""), nil
 		}
+	}
+
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return s, nil
 	}
 
 	var lexer chroma.Lexer
@@ -46,8 +51,8 @@ func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 
 	style := styles.Get("nord")
 	formatter := formatters.Get("terminal256")
-
 	var buffer bytes.Buffer
+
 	err = formatter.Format(&buffer, style, iterator)
 	if err != nil {
 		return "", fmt.Errorf("error formatting output: %v", err)
