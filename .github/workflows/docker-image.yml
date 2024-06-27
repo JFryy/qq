@@ -1,14 +1,26 @@
-name: Docker Image CI
+name: ci
+
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - 'main'
+      #TODO: handling
+      #- 'develop'
 
 jobs:
-  build:
+  docker:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag jfryy/qq:$(date +%s)
+      - uses: actions/checkout@v3
+        name: Check out code
+
+      - uses: mr-smithers-excellent/docker-build-push@v6
+        name: Build & push Docker image
+        with:
+          image: jfryy/qq
+          tags: v1, latest
+          multiPlatform: true
+          registry: registry.hub.docker.com
+          dockerfile: Dockerfile
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}

@@ -21,5 +21,5 @@ install: test
 perf: build
 	time "./tests/test.sh"
 
-.PHONY: all test clean
+.PHONY: all test clean publish
 
