@@ -6,12 +6,14 @@
 Basic usage:
 <a href="https://asciinema.org/a/665317" target="_blank"><img src="https://asciinema.org/a/665317.svg" /></a>
 
-```sh
-# query file and infer format from extension
-qq .foo.bar file.xml
 
-# query file through pipe, transcode xml -> terraform (it can be done but it probably shouldn't)
-cat file.xml | qq '.bar.foo[].meep' -i xml -o tf
+
+```sh
+# JSON is default in
+cat file.${ext} | qq -i ${ext}
+
+# query xml, grep with gron using qq io
+qq file.xml -o gron | grep -vE "sweet.potatoes" | qq -i gron
 
 # interactive query builder mode on target file
 qq . file.toml --interactive
@@ -29,6 +31,15 @@ make install
 
 Download at releases [here](https://github.com/JFryy/qq/releases).
 
+Docker quickstart:
+
+```shell
+# install the image
+docker pull jfryy/qq
+
+# run an example
+echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
+```
 ## Background
 
 `qq` is inspired by `fq` and `jq`. `jq` is a powerful and succinct query tool, sometimes I would find myself needing to use another bespoke tool for another format than json, whether its something dedicated with json query built in or a simple converter from one configuration format to json to pipe into jq. `qq` aims to be the only utility needed for most interaction with structured formats in the terminal. It can transcode configuration formats interchangeably between one-another with the power of `jq` and it has an `an interactive repl (with automcomplete)` to boot so you can have an interactive experience when building queries optionally. Many thanks to the authors of the libraries used in this project, especially `jq`, `gojq`, and `fq` for direct usage or inspiration for the project.

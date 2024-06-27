@@ -1,14 +1,12 @@
 FROM golang:1.22 as builder
 
-WORKDIR /app
-COPY ./ ./
-RUN go mod tidy
+WORKDIR /qq
 COPY . .
 ENV CGO_ENABLED 0
-RUN make build
+RUN go mod download && go mod verify
+RUN apt update -y && apt install jq -y && make publish
 
 FROM gcr.io/distroless/static:debug
 
-COPY --from=builder /app/bin/qq /
+COPY --from=builder /qq/bin/qq /
 ENTRYPOINT ["/qq"]
-CMD ["--help"]

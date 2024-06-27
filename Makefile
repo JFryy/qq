@@ -11,6 +11,10 @@ build:
 test: build
 	./tests/test.sh
 
+publish:
+	./tests/test.sh
+	go build -o bin/$(BINARY) $(SRC)
+
 clean:
 	rm bin/$(BINARY)
 
@@ -21,5 +25,5 @@ install: test
 perf: build
 	time "./tests/test.sh"
 
-.PHONY: all test clean
+.PHONY: all test clean publish
 
