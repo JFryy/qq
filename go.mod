@@ -7,7 +7,7 @@ require (
 	github.com/JFryy/qq/codec v0.0.0-20240626034628-3e21f7f0cea6
 )
 
-//replace github.com/JFryy/qq/codec => ./codec
+replace github.com/JFryy/qq/codec => ./codec
 
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
