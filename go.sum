@@ -1,11 +1,9 @@
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/JFryy/qq/cli v0.0.0-20240626034628-3e21f7f0cea6 h1:I5c+CyI0G6lWmq1cD1MuSTMg1WuyupS9tx+5iZghgoo=
-github.com/JFryy/qq/cli v0.0.0-20240626034628-3e21f7f0cea6/go.mod h1:FY3H5r2Y8RmcPxw8/8OGtqFYrPBYLrYvxLc8P24XCMA=
-github.com/JFryy/qq/codec v0.0.0-20240626034628-3e21f7f0cea6 h1:yZCNyEgMvQMRUXy6c0UpIaexMElHM2R+5vzVSo1JNnA=
-github.com/JFryy/qq/codec v0.0.0-20240626034628-3e21f7f0cea6/go.mod h1:1EK/NkTX3kh8uY6dA/ab5fmntXTSrtK9n6Oh6FNV0DI=
-github.com/JFryy/qq/internal/tui v0.0.0-20240626033059-fa396add9f28 h1:Ig16cOuxRBhmMKKgg8zge3DaXku9IXiBcBSHO5r3D+A=
-github.com/JFryy/qq/internal/tui v0.0.0-20240626033059-fa396add9f28/go.mod h1:Ly+dYmqoafiYbHisN05H7rfQPpMoW095T7ymfF1njes=
+github.com/JFryy/qq/cli v0.0.0-20240627035713-ff503872a7e0 h1:nuyiJKhBneH5IBSnqDjBdZ7sQlFf/GmPizHra3pMBCk=
+github.com/JFryy/qq/cli v0.0.0-20240627035713-ff503872a7e0/go.mod h1:ywdiLFS8L7py5K4/WJKC2XM+jKdi0ZWV7EpYQUCcsNA=
+github.com/JFryy/qq/internal/tui v0.0.0-20240627035713-ff503872a7e0 h1:N5IUaND0XRHpWVOMlvcJpP7LwR63iEF0cme/MiR7kQs=
+github.com/JFryy/qq/internal/tui v0.0.0-20240627035713-ff503872a7e0/go.mod h1:f3DEyNUYKn2WimPPqj09+ntPImdkzUHErm2i7PU2bHw=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
 github.com/agext/levenshtein v1.2.3/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/alecthomas/chroma v0.10.0 h1:7XDcGkCQopCNKjZHfYrNLraA+M7e0fMiJ/Mfikbfjek=

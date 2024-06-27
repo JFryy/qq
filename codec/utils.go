@@ -18,7 +18,6 @@ func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		// check v type
 		switch v.(type) {
 		case map[string]interface{}:
 			break
@@ -38,6 +37,9 @@ func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 		lexer = lexers.Get("json")
 	} else {
 		lexer = lexers.Get(fileType.String())
+        if lexer == nil {
+            lexer = lexers.Fallback
+        }
 	}
 
 	if lexer == nil {

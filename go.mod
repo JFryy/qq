@@ -3,15 +3,15 @@ module github.com/JFryy/qq
 go 1.22.4
 
 require (
-	github.com/JFryy/qq/cli v0.0.0-20240626034628-3e21f7f0cea6
-	github.com/JFryy/qq/codec v0.0.0-20240626034628-3e21f7f0cea6
+	github.com/JFryy/qq/cli v0.0.0-20240627035713-ff503872a7e0
+	github.com/JFryy/qq/codec v0.0.0-20240627035713-ff503872a7e0
 )
 
 replace github.com/JFryy/qq/codec => ./codec
 
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/JFryy/qq/internal/tui v0.0.0-20240626033059-fa396add9f28 // indirect
+	github.com/JFryy/qq/internal/tui v0.0.0-20240627035713-ff503872a7e0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
