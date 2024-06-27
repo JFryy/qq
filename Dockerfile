@@ -4,7 +4,8 @@ WORKDIR /qq
 COPY . .
 ENV CGO_ENABLED 0
 RUN go mod download && go mod verify
-RUN apt update -y && apt install jq -y && make publish
+RUN make build
+RUN apt update -y && apt install jq -y && make test
 
 FROM gcr.io/distroless/static:debug
 

@@ -11,10 +11,6 @@ build:
 test: build
 	./tests/test.sh
 
-publish:
-	./tests/test.sh
-	go build -o bin/$(BINARY) $(SRC)
-
 clean:
 	rm bin/$(BINARY)
 
