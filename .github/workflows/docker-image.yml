@@ -1,11 +1,11 @@
 name: ci
 
-# future: develop branch no push
 on:
   push:
     branches:
       - 'main'
-      - 'develop'
+      #TODO: handling
+      #- 'develop'
 
 jobs:
   docker:
