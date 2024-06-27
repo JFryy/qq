@@ -15,6 +15,9 @@ cat file.xml | qq '.bar.foo[].meep' -i xml -o tf
 
 # interactive query builder mode on target file
 qq . file.toml --interactive
+
+
+
 ```
 
 ## Installation
