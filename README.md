@@ -48,15 +48,12 @@ echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 * provide a fun to use interactive mode for building queries with autocomplete and realtime rendering preview.
 * `qq` is broad, but focuses on performance of encodings (but mostly `gojq` is very fast), execution is often times faster than most any "jq but for `${x}` configuration format"-type tools. `qq` performs similarly to benchmarks of `jq` running on `JSON` itself in most covered formats.
 
-consider the following file:
 ```shell
-du -h large-file.json
+$ du -h large-file.json
 25M     large-file.json
 ```
 
-qq is not a slouch on performance despite covering a lot of codecs (disclaimer: this is only noticable with larger file sizes, and this hasn't been extensively compared.)
-
-```shell
+```
 # gron large file bench
 
 $ time gron large-file.json --no-sort | rg -v '[1-4]' | gron --ungron --no-sort > /dev/null 2>&1
@@ -68,9 +65,7 @@ $ time qq -o gron large-file.json | rg -v '[1-4]' | qq -i gron > /dev/null 2>&1
 qq -o gron large-file.json  0.81s user 0.09s system 128% cpu 0.706 total
 rg -v '[1-4]'  0.02s user 0.01s system 5% cpu 0.706 total
 qq -i gron > /dev/null 2>&1  0.07s user 0.01s system 11% cpu 0.741 total
-```
 
-```shell
 # yq large file bench
 
 $ time yq large-file.json -M -o yaml > /dev/null 2>&1
