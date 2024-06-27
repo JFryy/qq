@@ -1,0 +1,8 @@
+example.name = "John";
+example.age = 30;
+example.address.city = "New York";
+example.address.zip_code = "10001";
+example.skills[0] = "Go";
+example.skills[1] = "JavaScript";
+example.contacts.email = "john@example.com";
+example.contacts.phone = "+1234567890";

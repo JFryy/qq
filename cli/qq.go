@@ -1,15 +1,15 @@
 package cli
 
 import (
-    "fmt"
-    "io"
-    "os"
-    "github.com/spf13/cobra"
-    "github.com/JFryy/qq/codec"
-    "path/filepath"
-    "strings"
-    "github.com/JFryy/qq/internal/tui"
-    "github.com/itchyny/gojq"
+	"fmt"
+	"github.com/JFryy/qq/codec"
+	"github.com/JFryy/qq/internal/tui"
+	"github.com/itchyny/gojq"
+	"github.com/spf13/cobra"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 func CreateRootCmd() *cobra.Command {
@@ -145,7 +145,6 @@ func handleCommand(args []string, inputtype string, outputtype string, rawInput 
 	os.Exit(0)
 }
 
-
 func isTerminal(f *os.File) bool {
 	info, err := f.Stat()
 	if err != nil {
@@ -153,7 +152,6 @@ func isTerminal(f *os.File) bool {
 	}
 	return (info.Mode() & os.ModeCharDevice) != 0
 }
-
 
 func isFile(path string) bool {
 	info, err := os.Stat(path)
@@ -173,7 +171,6 @@ func inferFileType(fName string) codec.EncodingType {
 	}
 	return codec.JSON
 }
-
 
 func executeQuery(query *gojq.Query, data interface{}, fileType codec.EncodingType, rawOut bool) {
 	iter := query.Run(data)

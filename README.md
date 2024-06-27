@@ -49,6 +49,7 @@ Note: these unsupported formats are on a roadmap for inclusion.
 | INI         | ✅ Supported   | ✅ Supported   |
 | HCL         | ✅ Supported   | ✅ Supported   |
 | TF          | ✅ Supported   | ✅ Supported   |
+| GRON        | ✅ Supported   | ✅ Supported   |
 | CSV         | ✅ Supported   | ❌ Not Supported |
 | Protobuf    | ❌ Not Supported | ❌ Not Supported |
 | HTML        | ❌ Not Supported | ❌ Not Supported |

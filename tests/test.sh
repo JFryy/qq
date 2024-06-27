@@ -60,9 +60,9 @@ done
 previous_ext="json"
 for file in ${extensions}; do
     print "" "============================================"
-    print "" "Executing: cat tests/test.xml | jq . | bin/qq -o $previous_ext"
+    print "" "Executing: cat $file | jq . | bin/qq -o $previous_ext"
     print "" "============================================"
-    bin/qq tests/test.xml | jq . | bin/qq -o $previous_ext
+    bin/qq $file | jq . | bin/qq -o $previous_ext
     print "green" "============================================"
     print "green" "Success."
     print "green" "============================================"
