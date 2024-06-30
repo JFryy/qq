@@ -61,29 +61,29 @@ var SupportedFileTypes = []Encoding{
 	{GRON, gronUnmarshal, gronMarshal},
 }
 
-func Unmarshal(input []byte, inputFileType EncodingType) (interface{}, error) {
+func Unmarshal(input []byte, inputFileType EncodingType, data interface{}) error {
 	for _, t := range SupportedFileTypes {
 		if t.Ext == inputFileType {
-			var data interface{}
-			err := t.Unmarshal(input, &data)
+			err := t.Unmarshal(input, data)
 			if err != nil {
-				return nil, fmt.Errorf("error parsing input: %v", err)
+				return fmt.Errorf("error parsing input: %v", err)
 			}
-			return data, nil
+			return nil
 		}
 	}
-	return nil, fmt.Errorf("unsupported input file type: %v", inputFileType)
+	return fmt.Errorf("unsupported input file type: %v", inputFileType)
 }
 
-func Marshal(v interface{}, outputFileType EncodingType) (string, error) {
+func Marshal(v interface{}, outputFileType EncodingType) ([]byte, error) {
 	for _, t := range SupportedFileTypes {
 		if t.Ext == outputFileType {
-			o, err := t.Marshal(v)
+			var err error
+			b, err := t.Marshal(v)
 			if err != nil {
-				return "", fmt.Errorf("error marshaling result to %s: %v", outputFileType, err)
+				return b, fmt.Errorf("error marshaling result to %s: %v", outputFileType, err)
 			}
-			return string(o), nil
+			return b, nil
 		}
 	}
-	return "", fmt.Errorf("unsupported output file type: %v", outputFileType)
+	return nil, fmt.Errorf("unsupported output file type: %v", outputFileType)
 }

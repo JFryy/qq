@@ -3,13 +3,13 @@ module github.com/JFryy/qq
 go 1.22.4
 
 require (
-	github.com/JFryy/qq/cli v0.0.0-20240627042830-6fe5404ea6a8
-	github.com/JFryy/qq/codec v0.0.0-20240627042830-6fe5404ea6a8
+	github.com/JFryy/qq/cli v0.0.0-20240630034221-c0ecc1532bb6
+	github.com/JFryy/qq/codec v0.0.0-20240630034221-c0ecc1532bb6
 )
 
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/JFryy/qq/internal/tui v0.0.0-20240627042830-6fe5404ea6a8 // indirect
+	github.com/JFryy/qq/internal/tui v0.0.0-20240630034221-c0ecc1532bb6 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect

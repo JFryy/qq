@@ -14,7 +14,8 @@ import (
 
 func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 	if raw {
-		v, err := Unmarshal([]byte(s), fileType)
+		var v interface{}
+		err := Unmarshal([]byte(s), fileType, &v)
 		if err != nil {
 			return "", err
 		}
@@ -37,9 +38,9 @@ func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 		lexer = lexers.Get("json")
 	} else {
 		lexer = lexers.Get(fileType.String())
-        if lexer == nil {
-            lexer = lexers.Fallback
-        }
+		if lexer == nil {
+			lexer = lexers.Fallback
+		}
 	}
 
 	if lexer == nil {
