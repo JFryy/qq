@@ -20,6 +20,11 @@ qq . file.toml --interactive
 ```
 
 ## Installation
+From brew:
+```shell
+brew install jfryy/tap/qq 
+```
+
 
 From source (requires `go` `>=1.22.4`)
 ```shell
