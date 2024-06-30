@@ -38,10 +38,8 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             jfryy/qq:${{ steps.check_branch.outputs.push_branch }}-${{ github.sha }}
-            jfryy/qq:v1
-            jfryy/qq:latest
-          if: ${{ steps.check_branch.outputs.push_branch == 'main' }}
+            jfryy/qq:${{ steps.check_branch.outputs.push_branch }}-latest
