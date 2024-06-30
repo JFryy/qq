@@ -9,6 +9,8 @@ require (
 	github.com/spf13/cobra v1.8.1
 )
 
+replace github.com/JFryy/qq/codec => ../codec
+
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect

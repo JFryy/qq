@@ -112,8 +112,8 @@ func handleCommand(args []string, inputtype string, outputtype string, rawInput 
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	data, err := codec.Unmarshal(input, inputCodec)
+	var data interface{}
+	err = codec.Unmarshal(input, inputCodec, &data)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -135,7 +135,8 @@ func handleCommand(args []string, inputtype string, outputtype string, rawInput 
 		os.Exit(0)
 	}
 
-	s, err := codec.Marshal(data, outputCodec)
+	b, err := codec.Marshal(data, outputCodec)
+	s := string(b)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -183,7 +184,8 @@ func executeQuery(query *gojq.Query, data interface{}, fileType codec.EncodingTy
 			fmt.Printf("Error executing jq expression: %v\n", err)
 			os.Exit(1)
 		}
-		s, err := codec.Marshal(v, fileType)
+		b, err := codec.Marshal(v, fileType)
+		s := string(b)
 		if err != nil {
 			fmt.Printf("Error formatting result: %v\n", err)
 			os.Exit(1)
