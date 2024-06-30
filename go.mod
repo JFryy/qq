@@ -7,10 +7,6 @@ require (
 	github.com/JFryy/qq/codec v0.0.0-20240630034221-c0ecc1532bb6
 )
 
-replace github.com/JFryy/qq/cli => ./cli
-
-replace github.com/JFryy/qq/codec => ./codec
-
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/JFryy/qq/internal/tui v0.0.0-20240630034221-c0ecc1532bb6 // indirect
