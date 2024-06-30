@@ -1,12 +1,30 @@
-FROM golang:1.22 as builder
+FROM debian:buster as builder
 
-WORKDIR /qq
+RUN apt-get update \
+    && apt-get install -y \
+        wget \
+        gnupg \
+        ca-certificates \
+        git \
+        jq \
+        make \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN wget -O /tmp/go.tar.gz https://golang.org/dl/go1.22.4.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf /tmp/go.tar.gz \
+    && rm /tmp/go.tar.gz
+
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GOPATH="/go"
+ENV GOBIN="/go/bin"
+WORKDIR /app
 COPY . .
-ENV CGO_ENABLED 0
 RUN make build
-RUN apt update -y && apt install jq -y && make test
 
-FROM gcr.io/distroless/static:debug
 
-COPY --from=builder /qq/bin/qq /
-ENTRYPOINT ["/qq"]
+FROM gcr.io/distroless/static:nonroot
+WORKDIR /qq
+COPY --from=builder /app/bin/qq ./qq
+
+ENTRYPOINT ["./qq"]
+CMD ["./qq", "--help"]
