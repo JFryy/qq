@@ -4,23 +4,43 @@ on:
   push:
     branches:
       - 'main'
-      #TODO: handling
-      #- 'develop'
+      - 'develop'
 
 jobs:
   docker:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
         name: Check out code
 
-      - uses: mr-smithers-excellent/docker-build-push@v6
-        name: Build & push Docker image
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
         with:
-          image: jfryy/qq
-          tags: v1, latest
-          multiPlatform: true
-          registry: registry.hub.docker.com
-          dockerfile: Dockerfile
+          platforms: all
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          buildkitd-flags: --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Determine push branch
+        id: check_branch
+        run: echo "::set-output name=push_branch::${GITHUB_REF##*/}"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: |
+            jfryy/qq:${{ steps.check_branch.outputs.push_branch }}-${{ github.sha }}
+            jfryy/qq:v1
+          if: ${{ steps.check_branch.outputs.push_branch == 'main' }}
