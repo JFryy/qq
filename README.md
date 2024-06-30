@@ -44,15 +44,16 @@ echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 ```
 ## Background
 
-`qq` is inspired by `fq` and `jq`. `jq` is a powerful and succinct query tool, sometimes I would find myself needing to use another bespoke tool for another format than json, whether its something dedicated with json query built in or a simple converter from one configuration format to json to pipe into jq. `qq` aims to be the only utility needed for most interaction with structured formats in the terminal. It can transcode configuration formats interchangeably between one-another with the power of `jq` and it has an `an interactive repl (with automcomplete)` to boot so you can have an interactive experience when building queries optionally. Many thanks to the authors of the libraries used in this project, especially `jq`, `gojq`, and `fq` for direct usage or inspiration for the project.
+`qq` is inspired by `fq` and `jq`. `jq` is a powerful and succinct query tool, sometimes I would find myself needing to use another bespoke tool for another format than json, whether its something dedicated with json query built in or a simple converter from one configuration format to json to pipe into jq. `qq` aims to be a handly utility on the terminal or in shell scripts that can be used for most interaction with structured formats in the terminal. It can transcode configuration formats interchangeably between one-another with the power of `jq` and it has an `an interactive repl (with automcomplete)` to boot so you can have an interactive experience when building queries optionally. Many thanks to the authors of the libraries used in this project, especially `jq`, `gojq`, `gron` and `fq` for direct usage and/or inspiration for the project.
 
 
 ## Features
 * support a wide range of configuration formats and transform them interchangeably between eachother.
 * quick and comprehensive querying of configuration formats without needing a pipeline of dedicated tools.
-* provide a fun to use interactive mode for building queries with autocomplete and realtime rendering preview.
-* `qq` is broad, but focuses on performance of encodings (but mostly `gojq` is very fast), execution is often times faster than most any "jq but for `${x}` configuration format"-type tools. `qq` performs similarly to benchmarks of `jq` running on `JSON` itself in most covered formats.
+* provide an interactive mode for building queries with autocomplete and realtime rendering preview.
+* `qq` is broad, but performant encodings are still a priority, execution is quite fast despite covering a broad range of codecs. `qq` performs competitively with dedicated tools for a given format.
 
+note: these improvements generally only occur on large files and are miniscule otherwise.
 ```shell
 $ du -h large-file.json
 25M     large-file.json
@@ -107,6 +108,13 @@ Note: these unsupported formats are on a roadmap for inclusion.
 All contributions are welcome to `qq`, especially for upkeep/optimization/addition of new encodings. For ideas on contributions [please refer to the todo docs](https://github.com/JFryy/qq/blob/main/docs/TODO.md) or make an issue/PR for a suggestion if there's something that's wanted or fixes.
 
 ## Thanks and Acknowledgements / Related Projects
+This tool would not be possible without the following projects, this project is arguably more of a composition of these projects than a truly original work, with glue code, some dedicated encoders/decoders, and the interactive mode being original work.
+Nevertheless, I hope this project can be useful to others, and I hope to contribute back to the community with this project.
+
 * [gojq](https://github.com/itchyny/gojq): `gojq` is a pure Go implementation of jq. It is used to power the query engine of qq.
 * [fq](https://github.com/wader/fq) : fq is a `jq` like tool for querying a wide array of binary formats.
-* Many encoding modules 🍻
+* [jq](https://github.com/jqlang/jq): `jq` is a lightweight and flexible command-line JSON processor.
+* [gron](https://github.com/tomnomnom/gron): gron transforms JSON into discrete assignments that are easy to grep.
+* [yq](https://github.com/mikefarah/yq): yq is a lightweight and flexible command-line YAML (and much more) processor.
+* [goccy](https://github.com/goccy/go-json): goccy has quite a few encoders and decoders for various formats, and is used in the project for some encodings.
+* [go-toml](https://github.com/BurntSushi/toml): go-toml is a TOML parser for Golang with reflection.
