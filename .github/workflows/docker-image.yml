@@ -43,4 +43,5 @@ jobs:
           tags: |
             jfryy/qq:${{ steps.check_branch.outputs.push_branch }}-${{ github.sha }}
             jfryy/qq:v1
+            jfryy/qq:latest
           if: ${{ steps.check_branch.outputs.push_branch == 'main' }}
