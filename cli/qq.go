@@ -24,6 +24,10 @@ func CreateRootCmd() *cobra.Command {
 		Short: "qq - JQ processing with conversions for popular configuration formats.",
 		Long:  "qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries.",
 		Run: func(cmd *cobra.Command, args []string) {
+            if version {
+                fmt.Println("qq version 0.15.0")
+                os.Exit(0)
+            }
 			if len(args) == 0 && !cmd.Flags().Changed("input") && !cmd.Flags().Changed("output") && !cmd.Flags().Changed("raw-input") && isTerminal(os.Stdin) {
 				err := cmd.Help()
 				if err != nil {
@@ -32,35 +36,30 @@ func CreateRootCmd() *cobra.Command {
 				}
 				os.Exit(0)
 			}
-			handleCommand(args, inputType, outputType, rawOutput, help, version, interactive)
+			handleCommand(args, inputType, outputType, rawOutput, help, interactive)
 		},
 	}
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
 	cmd.Flags().StringVarP(&outputType, "output", "o", "json", "specify output file type by extension name. This is inferred from extension if passing file position argument.")
 	cmd.Flags().BoolVarP(&rawOutput, "raw-output", "r", false, "output strings without escapes and quotes.")
-	cmd.Flags().BoolP("help", "h", false, "help for qq")
-	cmd.Flags().BoolP("version", "v", false, "version for qq")
+	cmd.Flags().BoolVarP(&help, "help", "h", false, "help for qq")
+	cmd.Flags().BoolVarP(&version, "version", "v", false, "version for qq")
 	cmd.Flags().BoolVarP(&interactive, "interactive", "I", false, "interactive mode for qq")
 
 	return cmd
 }
 
-func handleCommand(args []string, inputtype string, outputtype string, rawInput bool, help bool, version bool, interactive bool) {
+func handleCommand(args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool) {
 	var input []byte
 	var err error
 	var expression string
 	var filename string
-
 	if help {
 		val := CreateRootCmd().Help()
 		fmt.Println(val)
 		os.Exit(0)
 	}
 
-	if version {
-		fmt.Println("qq version 0.1.0")
-		os.Exit(0)
-	}
 	// handle input with stdin or file
 	switch len(args) {
 	case 0:
