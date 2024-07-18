@@ -22,10 +22,11 @@ const (
 	XML
 	INI
 	GRON
+	HTML
 )
 
 func (e EncodingType) String() string {
-	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron"}[e]
+	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html"}[e]
 }
 
 type Encoding struct {
@@ -59,6 +60,7 @@ var SupportedFileTypes = []Encoding{
 	{XML, xmlUnmarshal, xmlMarshal},
 	{INI, iniUnmarshal, iniMarshal},
 	{GRON, gronUnmarshal, gronMarshal},
+	{HTML, htmlUnmarshal, jsonMarshalIndent},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data interface{}) error {

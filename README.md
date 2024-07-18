@@ -9,11 +9,14 @@ Basic usage:
 
 
 ```sh
-# JSON is default in
+# JSON is default in and output.
 cat file.${ext} | qq -i ${ext}
 
-# query xml, grep with gron using qq io
+# query xml, grep with gron using qq io (for example) - gron is great.
 qq file.xml -o gron | grep -vE "sweet.potatoes" | qq -i gron
+
+# get some content from a site with html input
+curl motherfuckingwebsite.com | bin/qq -i html '.html.body.ul[][].data'
 
 # interactive query builder mode on target file
 qq . file.toml --interactive
@@ -95,7 +98,7 @@ Note: these unsupported formats are on a roadmap for inclusion.
 | GRON        | ✅ Supported   | ✅ Supported   |
 | CSV         | ✅ Supported   | ❌ Not Supported |
 | Protobuf    | ❌ Not Supported | ❌ Not Supported |
-| HTML        | ❌ Not Supported | ❌ Not Supported |
+| HTML        | ✅ Supported   | ❌ Not Supported |
 
 
 ## Caveats
