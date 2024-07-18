@@ -7,12 +7,9 @@ import (
 	"strings"
 )
 
-/* in progress code for html conversions
-   has a variety of issues at the moment for unmarshaling,
-   marshaling is not implemented yet and may not be implemented
-   e.g. decoding only to other formats, not encodiing to html supported
-   since the specification of input being formatted is difficult to achieve
-   on the fly with jq.
+/*
+HTML to Map Converter. These functions do not yet cover conversion to HTML, only from HTML to other arbitary output formats at this time.
+This implementation may have some limitations and may not cover all edge cases.
 */
 
 func htmlUnmarshal(data []byte, v interface{}) error {
@@ -27,19 +24,6 @@ func htmlUnmarshal(data []byte, v interface{}) error {
 	return json.Unmarshal(b, v)
 }
 
-func htmlMarshal(v interface{}) ([]byte, error) {
-	var htmlMap map[string]interface{}
-	b, err := json.Marshal(v) // To use JSON marshal from the interface
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(b, &htmlMap)
-	if err != nil {
-		return nil, err
-	}
-	return MapToHTML(htmlMap)
-}
-
 func HTMLToMap(htmlBytes []byte) (map[string]interface{}, error) {
 	doc, err := html.Parse(bytes.NewReader(htmlBytes))
 	if err != nil {
@@ -48,32 +32,22 @@ func HTMLToMap(htmlBytes []byte) (map[string]interface{}, error) {
 	return nodeToMap(doc), nil
 }
 
-func MapToHTML(data map[string]interface{}) ([]byte, error) {
-	node := mapToNode(data)
-	var buf bytes.Buffer
-	err := html.Render(&buf, node)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
 func nodeToMap(node *html.Node) map[string]interface{} {
+	// handle text node edge cases
 	if node.Type == html.TextNode {
 		text := strings.TrimSpace(node.Data)
-		if text == "" {
-			return nil // Skip whitespace-only text nodes
-		}
-		if strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r") {
-			return nil
+		if text != "" {
+			if strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r") {
+				return nil
+			}
+			return map[string]interface{}{"data": node.Data}
 		}
 	}
 
-	if node.Type == html.TextNode {
-		return map[string]interface{}{"data": node.Data}
-	}
-
+	// map initialization
 	m := make(map[string]interface{})
+
+	// Process attributes if present for node
 	if node.Attr != nil {
 		attrs := make(map[string]string)
 		for _, attr := range node.Attr {
@@ -82,60 +56,30 @@ func nodeToMap(node *html.Node) map[string]interface{} {
 		m["attr"] = attrs
 	}
 
+	// Recursively process children
+	children := make(map[string][]interface{})
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
 		childMap := nodeToMap(child)
-		if child.Data != ""  && child.Type != html.TextNode {
-			if _, ok := m[child.Data]; ok {
-				m[child.Data] = append(m[child.Data].([]interface{}), childMap)
-			} else {
-				m[child.Data] = []interface{}{childMap}
+		if childMap != nil {
+			if child.Type == html.ElementNode {
+				children[child.Data] = append(children[child.Data], childMap)
+			} else if data, ok := childMap["data"]; ok {
+				m["data"] = data
 			}
-		} else if text, ok := childMap["data"]; ok {
-			m["data"] = text
 		}
 	}
 
+	// merge
+	for key, value := range children {
+		if len(value) == 1 {
+			m[key] = value[0]
+		} else {
+			m[key] = value
+		}
+	}
+
+	if len(m) == 0 {
+		return nil
+	}
 	return m
-}
-
-func mapToNode(m map[string]interface{}) *html.Node {
-	node := &html.Node{}
-	if data, ok := m["type"].(string); ok {
-		node.Type = html.ElementNode
-		node.Data = data
-	}
-
-	if attrs, ok := m["attr"].(map[string]string); ok {
-		for key, val := range attrs {
-			node.Attr = append(node.Attr, html.Attribute{Key: key, Val: val})
-		}
-	}
-
-	for key, val := range m {
-		if key == "data" || key == "attr" || key == "text" {
-			continue
-		}
-
-		children, ok := val.([]interface{})
-		if !ok {
-			continue
-		}
-
-		for _, child := range children {
-			childMap, ok := child.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			childNode := mapToNode(childMap)
-			childNode.Data = key
-			node.AppendChild(childNode)
-		}
-	}
-
-	if text, ok := m["data"].(string); ok {
-		node.Type = html.TextNode
-		node.Data = text
-	}
-
-	return node
 }

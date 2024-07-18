@@ -60,7 +60,7 @@ var SupportedFileTypes = []Encoding{
 	{XML, xmlUnmarshal, xmlMarshal},
 	{INI, iniUnmarshal, iniMarshal},
 	{GRON, gronUnmarshal, gronMarshal},
-	{HTML, htmlUnmarshal, htmlMarshal},
+	{HTML, htmlUnmarshal, jsonMarshalIndent},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data interface{}) error {
