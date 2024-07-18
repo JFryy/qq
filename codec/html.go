@@ -67,18 +67,13 @@ func nodeToMap(node *html.Node) map[string]interface{} {
 		if strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r") {
 			return nil
 		}
-		return map[string]interface{}{"text": text}
 	}
 
 	if node.Type == html.TextNode {
-		return map[string]interface{}{"text": node.Data}
+		return map[string]interface{}{"data": node.Data}
 	}
 
 	m := make(map[string]interface{})
-	if node.Data != "" {
-		m["type"] = node.Data
-	}
-
 	if node.Attr != nil {
 		attrs := make(map[string]string)
 		for _, attr := range node.Attr {
@@ -89,14 +84,14 @@ func nodeToMap(node *html.Node) map[string]interface{} {
 
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
 		childMap := nodeToMap(child)
-		if child.Data != "" {
+		if child.Data != ""  && child.Type != html.TextNode {
 			if _, ok := m[child.Data]; ok {
 				m[child.Data] = append(m[child.Data].([]interface{}), childMap)
 			} else {
 				m[child.Data] = []interface{}{childMap}
 			}
-		} else if text, ok := childMap["text"]; ok {
-			m["text"] = text
+		} else if text, ok := childMap["data"]; ok {
+			m["data"] = text
 		}
 	}
 
@@ -137,7 +132,7 @@ func mapToNode(m map[string]interface{}) *html.Node {
 		}
 	}
 
-	if text, ok := m["text"].(string); ok {
+	if text, ok := m["data"].(string); ok {
 		node.Type = html.TextNode
 		node.Data = text
 	}
