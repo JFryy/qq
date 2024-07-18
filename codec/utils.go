@@ -7,15 +7,10 @@ import (
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
-	"golang.org/x/sys/unix"
+	"github.com/mattn/go-isatty"
 	"os"
 	"strings"
 )
-
-func IsTerminal(fd uintptr) bool {
-	_, err := unix.IoctlGetTermios(int(fd), unix.TIOCGETA)
-	return err == nil
-}
 
 func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 	if raw {
@@ -34,7 +29,7 @@ func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 		}
 	}
 
-	if !IsTerminal(os.Stdout.Fd()) {
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
 		return s, nil
 	}
 
