@@ -18,16 +18,17 @@ func CreateRootCmd() *cobra.Command {
 	var interactive bool
 	var version bool
 	var help bool
+	v := "v0.2.0"
 
 	cmd := &cobra.Command{
 		Use:   "qq [expression] [file] [flags] \n  cat [file] | qq [expression] [flags] \n  qq -I file",
 		Short: "qq - JQ processing with conversions for popular configuration formats.",
 		Long:  "qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries.",
 		Run: func(cmd *cobra.Command, args []string) {
-            if version {
-                fmt.Println("qq version 0.15.0")
-                os.Exit(0)
-            }
+			if version {
+				fmt.Println("qq version", v)
+				os.Exit(0)
+			}
 			if len(args) == 0 && !cmd.Flags().Changed("input") && !cmd.Flags().Changed("output") && !cmd.Flags().Changed("raw-input") && isTerminal(os.Stdin) {
 				err := cmd.Help()
 				if err != nil {
