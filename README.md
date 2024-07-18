@@ -16,7 +16,7 @@ cat file.${ext} | qq -i ${ext}
 qq file.xml -o gron | grep -vE "sweet.potatoes" | qq -i gron
 
 # get some content from a site with html input
-curl motherfuckingwebsite.com | bin/qq -i html '.html.body.ul[][].data'
+curl motherfuckingwebsite.com | qq -i html '.html.body.ul[][].data'
 
 # interactive query builder mode on target file
 qq . file.toml --interactive

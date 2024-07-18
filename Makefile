@@ -1,6 +1,6 @@
 SRC = ./
 BINARY = qq
-DESTDIR = /home/${USER}/.local/bin
+DESTDIR = ~/.local/bin
 
 all: build
 
