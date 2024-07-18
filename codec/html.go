@@ -17,7 +17,7 @@ func htmlUnmarshal(data []byte, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	b, err := json.Marshal(htmlMap) // To use JSON unmarshal into the interface
+	b, err := json.Marshal(htmlMap)
 	if err != nil {
 		return err
 	}
