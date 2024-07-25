@@ -28,6 +28,10 @@ From brew:
 brew install jfryy/tap/qq 
 ```
 
+From [AUR](https://aur.archlinux.org/packages/qq-git) (ArchLinux):
+```shell
+yay qq-git
+```
 
 From source (requires `go` `>=1.22.4`)
 ```shell
