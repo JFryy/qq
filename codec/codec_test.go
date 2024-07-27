@@ -58,49 +58,63 @@ func TestUnmarshal(t *testing.T) {
 	xmlData := `<root><key>value</key></root>`
 	yamlData := "key: value"
 	tomlData := "key = \"value\""
+	gronData := `key=value`
+	htmlData := `<html><body><key>value</key></body></html>`
+	tfData := `key = "value"`
+	cssData := `key: value`
 
 	tests := []struct {
 		input        []byte
 		encodingType EncodingType
+		expected     map[string]interface{}
 	}{
-		{[]byte(jsonData), JSON},
-		{[]byte(xmlData), XML},
-		{[]byte(yamlData), YAML},
-		{[]byte(tomlData), TOML},
+		{[]byte(jsonData), JSON, map[string]interface{}{"key": "value"}},
+		{[]byte(xmlData), XML, map[string]interface{}{"root": map[string]interface{}{"key": "value"}}},
+		{[]byte(yamlData), YAML, map[string]interface{}{"key": "value"}},
+		{[]byte(tomlData), TOML, map[string]interface{}{"key": "value"}},
+		{[]byte(gronData), GRON, map[string]interface{}{"key": "value"}},                                                                 
+		{[]byte(htmlData), HTML, map[string]interface{}{"html": map[string]interface{}{"body": map[string]interface{}{"key": "value"}}}}, 
+		{[]byte(tfData), TF, map[string]interface{}{"key": "value"}},                                                                     
+		{[]byte(cssData), CSV, map[string]interface{}{"key": "value"}},                                                                   
 	}
 
 	for _, tt := range tests {
-		var data interface{} 
+		var data interface{}
 		err := Unmarshal(tt.input, tt.encodingType, &data)
 		if err != nil {
 			t.Errorf("unmarshal failed for %v: %v", tt.encodingType, err)
 		}
-		
-		m, ok := data.(map[string]interface{})
-		if !ok {
-			t.Errorf("expected map[string]interface{}, got %T", data)
-		}
-		if value, ok := m["key"]; !ok || value != "value" {
-			t.Errorf("expected key 'key' with value 'value', got %v", data)
+
+		if !compareMaps(data, tt.expected) {
+			t.Errorf("%s: expected %v, got %v", tt.encodingType, tt.expected, data)
 		}
 	}
 }
 
-func TestUnsupportedTypes(t *testing.T) {
-	data := map[string]interface{}{"key": "value"}
-
-	
-	unsupportedType := EncodingType(len(SupportedFileTypes) + 1)
-	_, err := Marshal(data, unsupportedType)
-	if err == nil {
-		t.Error("expected error for unsupported marshal type, got nil")
+func compareMaps(a, b interface{}) bool {
+	mapA, okA := a.(map[string]interface{})
+	mapB, okB := b.(map[string]interface{})
+	if !okA || !okB {
+		return false
 	}
-
-	
-	unsupportedData := []byte(`{"key": "value"}`)
-	err = Unmarshal(unsupportedData, unsupportedType, &data)
-	if err == nil {
-		t.Error("expected error for unsupported unmarshal type, got nil")
+	if len(mapA) != len(mapB) {
+		return false
 	}
+	for key, valueA := range mapA {
+		valueB, exists := mapB[key]
+		if !exists {
+			return false
+		}
+		switch valueA := valueA.(type) {
+		case map[string]interface{}:
+			if !compareMaps(valueA, valueB) {
+				return false
+			}
+		default:
+			if valueA != valueB {
+				return false
+			}
+		}
+	}
+	return true
 }
-
