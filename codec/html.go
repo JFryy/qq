@@ -51,35 +51,6 @@ func HTMLToMap(htmlBytes []byte) (map[string]interface{}, error) {
 }
 
 func nodeToMap(node *html.Node) interface{} {
-
-	// Handle text proceeding and following whitespace, newlines, etc.
-	if node.Type == html.TextNode {
-		text := strings.TrimSpace(node.Data)
-		if text == "" {
-			return nil
-		}
-		if strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r") {
-			return nil
-		}
-		text, _ = strings.CutSuffix(text, "\n\r")
-		text, _ = strings.CutPrefix(text, "\n")
-		return text
-	}
-
-	if node.Type == html.CommentNode {
-		text := strings.TrimSpace(node.Data)
-		if text == "" {
-			return nil
-		}
-		if strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r") {
-			return nil
-		}
-		text, _ = strings.CutSuffix(text, "\n\r")
-		text, _ = strings.CutPrefix(text, "\n")
-		return map[string]interface{}{"#comment": text}
-
-	}
-
 	m := make(map[string]interface{})
 
 	// Process attributes if present for node
@@ -89,26 +60,35 @@ func nodeToMap(node *html.Node) interface{} {
 		}
 	}
 
-	// Recursively process children
+	// Recursively process all the children
 	var childTexts []string
 	var comments []string
 	children := make(map[string][]interface{})
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		childMap := nodeToMap(child)
-		if childMap != nil {
-			if child.Type == html.ElementNode {
-				children[child.Data] = append(children[child.Data], childMap)
-			} else if text, ok := childMap.(string); ok {
+		switch child.Type {
+		case html.TextNode:
+			text := strings.TrimSpace(child.Data)
+			if text != "" && !(strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r")) {
+				text, _ = strings.CutSuffix(text, "\n\r")
+				text, _ = strings.CutPrefix(text, "\n")
 				childTexts = append(childTexts, text)
-			} else if comment, ok := childMap.(map[string]interface{}); ok && comment["#comment"] != nil {
-				if commentText, ok := comment["#comment"].(string); ok {
-					comments = append(comments, commentText)
-				}
+			}
+		case html.CommentNode:
+			text := strings.TrimSpace(child.Data)
+			if text != "" && !(strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r")) {
+				text, _ = strings.CutSuffix(text, "\n\r")
+				text, _ = strings.CutPrefix(text, "\n")
+				comments = append(comments, text)
+			}
+		case html.ElementNode:
+			childMap := nodeToMap(child)
+			if childMap != nil {
+				children[child.Data] = append(children[child.Data], childMap)
 			}
 		}
 	}
 
-	// Merge children into map
+	// Merge children into one
 	for key, value := range children {
 		if len(value) == 1 {
 			m[key] = value[0]
@@ -117,7 +97,7 @@ func nodeToMap(node *html.Node) interface{} {
 		}
 	}
 
-	// Handle text content if present
+	// Handle the children's text
 	if len(childTexts) > 0 {
 		if len(childTexts) == 1 {
 			if len(m) == 0 {
@@ -129,7 +109,7 @@ func nodeToMap(node *html.Node) interface{} {
 		}
 	}
 
-	// Handle comments if present
+	// Handle comments
 	if len(comments) > 0 {
 		if len(comments) == 1 {
 			if len(m) == 0 {
@@ -137,10 +117,11 @@ func nodeToMap(node *html.Node) interface{} {
 			} else {
 				m["#comment"] = comments[0]
 			}
+		} else {
+			m["#comment"] = comments
 		}
 	}
 
-	// Simplify map if only contains text or single child element
 	if len(m) == 0 {
 		return nil
 	} else if len(m) == 1 {
@@ -156,6 +137,6 @@ func nodeToMap(node *html.Node) interface{} {
 			}
 		}
 	}
+
 	return m
 }
-
