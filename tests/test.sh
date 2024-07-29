@@ -23,7 +23,8 @@ print() {
 }
 
 
-extensions=$(ls -1 tests/* | grep -Ev '.sh|csv')
+# ini has edge cases that prevent transcoding to other formats
+extensions=$(ls -1 tests/* | grep -Ev '.sh|ini')
 for i in ${extensions}; do
     echo "Testing $i"
     for f in ${extensions}; do

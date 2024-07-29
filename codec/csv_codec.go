@@ -16,21 +16,19 @@ func csvUnmarshal(input []byte, v interface{}) error {
 		return fmt.Errorf("error reading CSV headers: %v", err)
 	}
 
-	var records [][]string
-
-	// Append headers as the first record
-	records = append(records, headers)
-
-	// Read the remaining rows
+	var records []map[string]string
 	for {
 		record, err := r.Read()
 		if err != nil {
 			break
 		}
-		records = append(records, record)
-	}
 
-	// Marshal the records to JSON and then unmarshal into the provided interface
+		rowMap := make(map[string]string)
+		for i, header := range headers {
+			rowMap[header] = record[i]
+		}
+		records = append(records, rowMap)
+	}
 	jsonData, err := json.Marshal(records)
 	if err != nil {
 		return fmt.Errorf("error marshaling to JSON: %v", err)

@@ -12,14 +12,18 @@ Basic usage:
 # JSON is default in and output.
 cat file.${ext} | qq -i ${ext}
 
-# query xml, grep with gron using qq io (for example) - gron is great.
+# Extension is parsed, no need for input flag
+qq '.' file.xml
+
+# random example: query xml, grep with gron using qq io and output as json
 qq file.xml -o gron | grep -vE "sweet.potatoes" | qq -i gron
 
 # get some content from a site with html input
-curl motherfuckingwebsite.com | qq -i html '.html.body.ul[][].data'
+curl motherfuckingwebsite.com | bin/qq -i html '.html.body.ul.li[0]'
+
 
 # interactive query builder mode on target file
-qq . file.toml --interactive
+qq . file.json --interactive
 ```
 
 ## Installation
@@ -103,6 +107,7 @@ Note: these unsupported formats are on a roadmap for inclusion.
 | CSV         | ✅ Supported   | ❌ Not Supported |
 | Protobuf    | ❌ Not Supported | ❌ Not Supported |
 | HTML        | ✅ Supported   | ❌ Not Supported |
+| TXT (newline)| ✅ Supported   | ❌ Not Supported |
 
 
 ## Caveats
