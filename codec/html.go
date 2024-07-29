@@ -5,12 +5,26 @@ import (
 	"github.com/goccy/go-json"
 	"golang.org/x/net/html"
 	"strings"
+    "regexp"
+    "strconv"
 )
 
 /*
 HTML to Map Converter. These functions do not yet cover conversion to HTML, only from HTML to other arbitrary output formats at this time.
 This implementation may have some limitations and may not cover all edge cases.
 */
+
+func decodeUnicodeEscapes(s string) (string, error) {
+    re := regexp.MustCompile(`\\u([0-9a-fA-F]{4})`)
+    return re.ReplaceAllStringFunc(s, func(match string) string {
+        hex := match[2:]
+        codePoint, err := strconv.ParseInt(hex, 16, 32)
+        if err != nil {
+            return match
+        }
+        return string(rune(codePoint))
+    }), nil
+}
 
 func htmlUnmarshal(data []byte, v interface{}) error {
 	htmlMap, err := HTMLToMap(data)
@@ -50,13 +64,16 @@ func HTMLToMap(htmlBytes []byte) (map[string]interface{}, error) {
 	return nil, nil
 }
 
+
 func nodeToMap(node *html.Node) interface{} {
 	m := make(map[string]interface{})
 
 	// Process attributes if present for node
 	if node.Attr != nil {
 		for _, attr := range node.Attr {
-			m["@"+attr.Key] = attr.Val
+			// Decode Unicode escape sequences and HTML entities
+            v, _ := decodeUnicodeEscapes(attr.Val)
+			m["@"+attr.Key] = v
 		}
 	}
 
@@ -71,6 +88,7 @@ func nodeToMap(node *html.Node) interface{} {
 			if text != "" && !(strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r")) {
 				text, _ = strings.CutSuffix(text, "\n\r")
 				text, _ = strings.CutPrefix(text, "\n")
+			    text, _ = decodeUnicodeEscapes(text)
 				childTexts = append(childTexts, text)
 			}
 		case html.CommentNode:
@@ -78,6 +96,7 @@ func nodeToMap(node *html.Node) interface{} {
 			if text != "" && !(strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r")) {
 				text, _ = strings.CutSuffix(text, "\n\r")
 				text, _ = strings.CutPrefix(text, "\n")
+                text = html.UnescapeString(text)
 				comments = append(comments, text)
 			}
 		case html.ElementNode:
