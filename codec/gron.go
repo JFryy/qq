@@ -13,6 +13,7 @@ func gronUnmarshal(data []byte, v interface{}) error {
 	lines := strings.Split(string(data), "\n")
 	var isArray bool
 	dataMap := make(map[string]interface{})
+	arrayData := make([]interface{}, 0)
 
 	for _, line := range lines {
 		if len(line) == 0 {
@@ -34,23 +35,21 @@ func gronUnmarshal(data []byte, v interface{}) error {
 		setValueJSON(dataMap, key, parsedValue)
 	}
 
-	if isArray {
-		var arrayData []interface{}
-		for i := 0; i < len(dataMap); i++ {
-			if val, ok := dataMap[fmt.Sprintf("[%d]", i)]; ok {
-				arrayData = append(arrayData, val)
+	if isArray && len(dataMap) == 1 {
+		for _, val := range dataMap {
+			if arrayVal, ok := val.([]interface{}); ok {
+				arrayData = arrayVal
 			}
 		}
-		vv := reflect.ValueOf(v)
-		if vv.Kind() != reflect.Ptr || vv.IsNil() {
-			return fmt.Errorf("provided value must be a non-nil pointer")
-		}
+	}
+
+	vv := reflect.ValueOf(v)
+	if vv.Kind() != reflect.Ptr || vv.IsNil() {
+		return fmt.Errorf("provided value must be a non-nil pointer")
+	}
+	if isArray && len(arrayData) > 0 {
 		vv.Elem().Set(reflect.ValueOf(arrayData))
 	} else {
-		vv := reflect.ValueOf(v)
-		if vv.Kind() != reflect.Ptr || vv.IsNil() {
-			return fmt.Errorf("provided value must be a non-nil pointer")
-		}
 		vv.Elem().Set(reflect.ValueOf(dataMap))
 	}
 
@@ -73,7 +72,7 @@ func traverseJSON(prefix string, v interface{}, buf *bytes.Buffer) {
 		}
 	case reflect.Slice:
 		for i := 0; i < rv.Len(); i++ {
-			traverseJSON(fmt.Sprintf("[%d]", i), rv.Index(i).Interface(), buf)
+			traverseJSON(fmt.Sprintf("%s[%d]", prefix, i), rv.Index(i).Interface(), buf)
 		}
 	default:
 		buf.WriteString(fmt.Sprintf("%s = %s;\n", prefix, formatJSONValue(v)))
@@ -83,6 +82,9 @@ func traverseJSON(prefix string, v interface{}, buf *bytes.Buffer) {
 func addPrefix(prefix, name string) string {
 	if prefix == "" {
 		return name
+	}
+	if strings.Contains(name, "[") && strings.Contains(name, "]") {
+		return prefix + name
 	}
 	return prefix + "." + name
 }
@@ -127,10 +129,30 @@ func setValueJSON(data map[string]interface{}, key string, value interface{}) {
 				m[part] = value
 			}
 		} else {
-			if _, ok := m[part]; !ok {
-				m[part] = make(map[string]interface{})
+            // fix index assignment nested map: this is needs optimization
+			if strings.Contains(part, "[") && strings.Contains(part, "]") {
+				k := strings.Split(part, "[")[0]
+				index := parseArrayIndex(part)
+				if _, ok := m[k]; !ok {
+					m[k] = make([]interface{}, index+1)
+				}
+				arr := m[k].([]interface{})
+				if len(arr) <= index {
+					for len(arr) <= index {
+						arr = append(arr, nil)
+					}
+					m[k] = arr
+				}
+				if arr[index] == nil {
+					arr[index] = make(map[string]interface{})
+				}
+				m = arr[index].(map[string]interface{})
+			} else {
+				if _, ok := m[part]; !ok {
+					m[part] = make(map[string]interface{})
+				}
+				m = m[part].(map[string]interface{})
 			}
-			m = m[part].(map[string]interface{})
 		}
 	}
 }
@@ -140,3 +162,4 @@ func parseArrayIndex(part string) int {
 	index, _ := strconv.Atoi(indexStr)
 	return index
 }
+
