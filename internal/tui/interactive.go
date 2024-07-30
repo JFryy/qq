@@ -8,15 +8,17 @@ import (
 
 	"github.com/JFryy/qq/codec"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/itchyny/gojq"
 )
 
 var (
-	focusedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	cursorStyle  = focusedStyle
-	previewStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("178")).Italic(true)
+	focusedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	cursorStyle   = focusedStyle
+	previewStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("178")).Italic(true)
+	outputStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("36"))
 )
 
 type model struct {
@@ -29,11 +31,13 @@ type model struct {
 	jqOptions      []string
 	suggestedValue string
 	jsonObj        interface{}
+	viewport       viewport.Model
 }
 
 func newModel(data string) model {
 	m := model{
 		inputs: make([]textinput.Model, 1),
+		viewport: viewport.New(0, 0), // Initial size will be set in Init()
 	}
 
 	t := textinput.New()
@@ -51,6 +55,7 @@ func newModel(data string) model {
 
 	m.runJqFilter()
 	m.jsonObj, _ = jsonStrToInterface(m.jsonInput)
+
 	return m
 }
 
@@ -90,11 +95,20 @@ func extractPaths(data interface{}, prefix string, options map[string]struct{}) 
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return tea.EnterAltScreen
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		headerHeight := 2
+		footerHeight := 1
+		availableHeight := msg.Height - headerHeight - footerHeight
+		m.viewport.Width = msg.Width
+		m.viewport.Height = availableHeight
+		m.updateViewportContent()
+		return m, nil
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
@@ -122,6 +136,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// put result and quit
 			m.jsonObj, _ = jsonStrToInterface(m.jsonInput)
 			return m, tea.Quit
+
+		case "up":
+			m.viewport.LineUp(1)
+			return m, nil
+
+		case "down":
+			m.viewport.LineDown(1)
+			return m, nil
 
 		default:
 			if m.showingPreview {
@@ -158,10 +180,12 @@ func jsonStrToInterface(jsonStr string) (interface{}, error) {
 	}
 	return jsonData, nil
 }
+
 func (m *model) runJqFilter() {
 	query, err := gojq.Parse(m.inputs[0].Value())
 	if err != nil {
 		m.jqOutput = fmt.Sprintf("Invalid jq query: %s\n\nLast valid output:\n%s", err, m.lastOutput)
+		m.updateViewportContent()
 		return
 	}
 
@@ -169,6 +193,7 @@ func (m *model) runJqFilter() {
 	err = json.Unmarshal([]byte(m.jsonInput), &jsonData)
 	if err != nil {
 		m.jqOutput = fmt.Sprintf("Invalid JSON input: %s\n\nLast valid output:\n%s", err, m.lastOutput)
+		m.updateViewportContent()
 		return
 	}
 
@@ -182,11 +207,13 @@ func (m *model) runJqFilter() {
 		}
 		if err, ok := v.(error); ok {
 			m.jqOutput = fmt.Sprintf("Error executing jq query: %s\n\nLast valid output:\n%s", err, m.lastOutput)
+			m.updateViewportContent()
 			return
 		}
 		output, err := json.MarshalIndent(v, "", "  ")
 		if err != nil {
 			m.jqOutput = fmt.Sprintf("Error formatting output: %s\n\nLast valid output:\n%s", err, m.lastOutput)
+			m.updateViewportContent()
 			return
 		}
 		if string(output) != "null" {
@@ -197,11 +224,23 @@ func (m *model) runJqFilter() {
 
 	if isNull {
 		m.jqOutput = fmt.Sprintf("Query result is null\n\nLast valid output:\n%s", m.lastOutput)
+		m.updateViewportContent()
 		return
 	}
 
 	m.jqOutput = strings.Join(result, "\n")
 	m.lastOutput = m.jqOutput
+	m.updateViewportContent()
+}
+
+func (m *model) updateViewportContent() {
+	// Ensure jqOutput is pretty formatted
+	prettyOutput, err := codec.PrettyFormat(m.jqOutput, codec.JSON, false)
+	if err != nil {
+		m.viewport.SetContent(fmt.Sprintf("Error formatting output: %s", err))
+		return
+	}
+	m.viewport.SetContent(outputStyle.Render(prettyOutput))
 }
 
 func (m model) View() string {
@@ -219,8 +258,7 @@ func (m model) View() string {
 	}
 
 	b.WriteString("\n")
-	o, _ := codec.PrettyFormat(m.jqOutput, codec.JSON, false)
-	b.WriteString(o)
+	b.WriteString(m.viewport.View())
 
 	return b.String()
 }
@@ -245,3 +283,4 @@ func Interact(s string) {
 	}
 	printOutput(m.(model))
 }
+
