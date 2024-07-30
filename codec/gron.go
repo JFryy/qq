@@ -140,4 +140,3 @@ func parseArrayIndex(part string) int {
 	index, _ := strconv.Atoi(indexStr)
 	return index
 }
-

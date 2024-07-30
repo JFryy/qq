@@ -28,7 +28,7 @@ func xmlUnmarshal(input []byte, v interface{}) error {
 
 	parsedData := parseXMLValues(mv.Old())
 
-    // reflection of values required for type assertions on interface
+	// reflection of values required for type assertions on interface
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return fmt.Errorf("provided value must be a non-nil pointer")

@@ -1,8 +1,8 @@
 package codec
 
 import (
-    "github.com/goccy/go-json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"reflect"
 	"testing"
 )
@@ -22,7 +22,7 @@ func TestGetEncodingType(t *testing.T) {
 		{"xml", XML},
 		{"ini", INI},
 		{"gron", GRON},
-//		{"html", HTML},
+		//		{"html", HTML},
 	}
 
 	for _, tt := range tests {
@@ -63,9 +63,9 @@ func TestUnmarshal(t *testing.T) {
 	tomlData := "key = \"value\""
 	gronData := `key = "value";`
 	tfData := `key = "value"`
-    // note: html and csv tests are not yet functional
-//	htmlData := `<html><body><key>value</key></body></html>`
-//	csvData := "key1,key2\nvalue1,value2\nvalue3,value4"
+	// note: html and csv tests are not yet functional
+	//	htmlData := `<html><body><key>value</key></body></html>`
+	//	csvData := "key1,key2\nvalue1,value2\nvalue3,value4"
 
 	tests := []struct {
 		input        []byte
@@ -78,11 +78,11 @@ func TestUnmarshal(t *testing.T) {
 		{[]byte(tomlData), TOML, map[string]interface{}{"key": "value"}},
 		{[]byte(gronData), GRON, map[string]interface{}{"key": "value"}},
 		{[]byte(tfData), TF, map[string]interface{}{"key": "value"}},
-//		{[]byte(htmlData), HTML, map[string]interface{}{"html": map[string]interface{}{"body": map[string]interface{}{"key": "value"}}}},
-//		{[]byte(csvData), CSV, []map[string]interface{}{
-//			{"key1": "value1", "key2": "value2"},
-//			{"key1": "value3", "key2": "value4"},
-//		}},
+		//		{[]byte(htmlData), HTML, map[string]interface{}{"html": map[string]interface{}{"body": map[string]interface{}{"key": "value"}}}},
+		//		{[]byte(csvData), CSV, []map[string]interface{}{
+		//			{"key1": "value1", "key2": "value2"},
+		//			{"key1": "value3", "key2": "value4"},
+		//		}},
 	}
 
 	for _, tt := range tests {
@@ -102,4 +102,3 @@ func TestUnmarshal(t *testing.T) {
 		}
 	}
 }
-

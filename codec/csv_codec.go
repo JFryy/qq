@@ -3,8 +3,8 @@ package codec
 import (
 	"bytes"
 	"encoding/csv"
-	"github.com/goccy/go-json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"io"
 	"strings"
 )
@@ -33,7 +33,6 @@ func detectDelimiter(input []byte) rune {
 
 	return maxDelimiter
 }
-
 
 func csvUnmarshal(input []byte, v interface{}) error {
 	delimiter := detectDelimiter(input)
@@ -73,4 +72,3 @@ func csvUnmarshal(input []byte, v interface{}) error {
 
 	return nil
 }
-

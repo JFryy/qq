@@ -9,10 +9,9 @@ import (
 	"github.com/alecthomas/chroma/styles"
 	"github.com/mattn/go-isatty"
 	"os"
+	"strconv"
 	"strings"
-    "strconv"
-    "time"
-
+	"time"
 )
 
 func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
@@ -87,4 +86,3 @@ func parseValue(value string) interface{} {
 	}
 	return value
 }
-

@@ -3,8 +3,8 @@ package codec
 import (
 	"fmt"
 	"github.com/goccy/go-json"
+	"reflect"
 	"strings"
-    "reflect"
 )
 
 func lineUnmarshal(input []byte, v interface{}) error {
@@ -33,4 +33,3 @@ func lineUnmarshal(input []byte, v interface{}) error {
 
 	return nil
 }
-
