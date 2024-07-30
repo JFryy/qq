@@ -10,27 +10,51 @@ import (
 )
 
 func gronUnmarshal(data []byte, v interface{}) error {
-	d := make(map[string]interface{})
-
 	lines := strings.Split(string(data), "\n")
+	var isArray bool
+	dataMap := make(map[string]interface{})
+
 	for _, line := range lines {
 		if len(line) == 0 {
 			continue
 		}
 		parts := strings.SplitN(line, " = ", 2)
 		if len(parts) != 2 {
-			return nil
+			return fmt.Errorf("invalid line format: %s", line)
 		}
 
 		key := strings.TrimSpace(parts[0])
 		value := strings.Trim(parts[1], `";`)
+		parsedValue := parseValue(value)
 
-		setValueJSON(d, key, value)
+		if strings.HasPrefix(key, "[") && strings.Contains(key, "]") {
+			isArray = true
+		}
+
+		setValueJSON(dataMap, key, parsedValue)
 	}
 
-	*v.(*interface{}) = d
-	return nil
+	if isArray {
+		var arrayData []interface{}
+		for i := 0; i < len(dataMap); i++ {
+			if val, ok := dataMap[fmt.Sprintf("[%d]", i)]; ok {
+				arrayData = append(arrayData, val)
+			}
+		}
+		vv := reflect.ValueOf(v)
+		if vv.Kind() != reflect.Ptr || vv.IsNil() {
+			return fmt.Errorf("provided value must be a non-nil pointer")
+		}
+		vv.Elem().Set(reflect.ValueOf(arrayData))
+	} else {
+		vv := reflect.ValueOf(v)
+		if vv.Kind() != reflect.Ptr || vv.IsNil() {
+			return fmt.Errorf("provided value must be a non-nil pointer")
+		}
+		vv.Elem().Set(reflect.ValueOf(dataMap))
+	}
 
+	return nil
 }
 
 func gronMarshal(v interface{}) ([]byte, error) {
@@ -49,7 +73,7 @@ func traverseJSON(prefix string, v interface{}, buf *bytes.Buffer) {
 		}
 	case reflect.Slice:
 		for i := 0; i < rv.Len(); i++ {
-			traverseJSON(fmt.Sprintf("%s[%d]", prefix, i), rv.Index(i).Interface(), buf)
+			traverseJSON(fmt.Sprintf("[%d]", i), rv.Index(i).Interface(), buf)
 		}
 	default:
 		buf.WriteString(fmt.Sprintf("%s = %s;\n", prefix, formatJSONValue(v)))
@@ -80,18 +104,25 @@ func formatJSONValue(v interface{}) string {
 	}
 }
 
-func setValueJSON(data map[string]interface{}, key, value string) {
+func setValueJSON(data map[string]interface{}, key string, value interface{}) {
 	parts := strings.Split(key, ".")
 	var m = data
 	for i, part := range parts {
 		if i == len(parts)-1 {
 			if strings.Contains(part, "[") && strings.Contains(part, "]") {
 				k := strings.Split(part, "[")[0]
+				index := parseArrayIndex(part)
 				if _, ok := m[k]; !ok {
-					m[k] = make([]interface{}, 0)
+					m[k] = make([]interface{}, index+1)
 				}
-
-				m[k] = append(m[k].([]interface{}), value)
+				arr := m[k].([]interface{})
+				if len(arr) <= index {
+					for len(arr) <= index {
+						arr = append(arr, nil)
+					}
+					m[k] = arr
+				}
+				arr[index] = value
 			} else {
 				m[part] = value
 			}
@@ -102,4 +133,10 @@ func setValueJSON(data map[string]interface{}, key, value string) {
 			m = m[part].(map[string]interface{})
 		}
 	}
+}
+
+func parseArrayIndex(part string) int {
+	indexStr := strings.Trim(part[strings.Index(part, "[")+1:strings.Index(part, "]")], " ")
+	index, _ := strconv.Atoi(indexStr)
+	return index
 }

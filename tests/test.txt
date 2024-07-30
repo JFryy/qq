@@ -1,3 +1,7 @@
 this is an example
 this is also another one
 this is one more
+42
+42.1
+false
+

@@ -1,6 +1,9 @@
-name,age,email
-John Doe,29,john.doe@example.com
-Jane Smith,34,jane.smith@example.com
-Alice Johnson,23,alice.johnson@example.com
-Bob Brown,45,bob.brown@example.com
-
+ID, Date, Temperature, Humidity, Location, Status, Description
+1, 2024-07-01, 23.5, 55, Warehouse, true, Storage check completed
+2, 2024-07-02, 24.7, 52, Warehouse, false, Equipment maintenance pending
+3, 2024-07-03, 22.8, 60, Warehouse, true, All systems operational
+4, 2024-07-04, 23.1, 58, Laboratory, true, Experiment started
+5, 2024-07-05, 25.0, 50, Laboratory, false, Data collection in progress
+6, 2024-07-06, 21.5, 65, Laboratory, true, Analysis completed
+7, 2024-07-07, 20.3, 70, Greenhouse, true, Irrigation system activated
+8, 2024-07-08, 22.4, 63, Greenhouse, false, Pest control required
