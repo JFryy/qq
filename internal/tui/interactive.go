@@ -15,10 +15,10 @@ import (
 )
 
 var (
-	focusedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	cursorStyle   = focusedStyle
-	previewStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("178")).Italic(true)
-	outputStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("36"))
+	focusedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	cursorStyle  = focusedStyle
+	previewStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("178")).Italic(true)
+	outputStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("36"))
 )
 
 type model struct {
@@ -36,8 +36,8 @@ type model struct {
 
 func newModel(data string) model {
 	m := model{
-		inputs: make([]textinput.Model, 1),
-		viewport: viewport.New(0, 0), // Initial size will be set in Init()
+		inputs:   make([]textinput.Model, 1),
+		viewport: viewport.New(0, 0),
 	}
 
 	t := textinput.New()
@@ -49,8 +49,6 @@ func newModel(data string) model {
 	t.TextStyle = focusedStyle
 	m.inputs[0] = t
 	m.jsonInput = string(data)
-
-	// Generate jq options based on JSON input
 	m.jqOptions = generateJqOptions(m.jsonInput)
 
 	m.runJqFilter()
@@ -114,8 +112,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
 
-		case "tab":
 			// Suggest next jq option
+		case "tab":
 			if !m.showingPreview {
 				m.showingPreview = true
 				m.currentIndex = 0
@@ -133,7 +131,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.runJqFilter()
 				return m, nil
 			}
-			// put result and quit
 			m.jsonObj, _ = jsonStrToInterface(m.jsonInput)
 			return m, tea.Quit
 
@@ -143,6 +140,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "down":
 			m.viewport.LineDown(1)
+			return m, nil
+
+		case "pageup":
+			m.viewport.ViewUp()
+			return m, nil
+		case "pagedown":
+			m.viewport.ViewDown()
 			return m, nil
 
 		default:
@@ -234,7 +238,6 @@ func (m *model) runJqFilter() {
 }
 
 func (m *model) updateViewportContent() {
-	// Ensure jqOutput is pretty formatted
 	prettyOutput, err := codec.PrettyFormat(m.jqOutput, codec.JSON, false)
 	if err != nil {
 		m.viewport.SetContent(fmt.Sprintf("Error formatting output: %s", err))
@@ -283,4 +286,3 @@ func Interact(s string) {
 	}
 	printOutput(m.(model))
 }
-

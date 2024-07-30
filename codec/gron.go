@@ -129,7 +129,7 @@ func setValueJSON(data map[string]interface{}, key string, value interface{}) {
 				m[part] = value
 			}
 		} else {
-            // fix index assignment nested map: this is needs optimization
+			// fix index assignment nested map: this is needs optimization
 			if strings.Contains(part, "[") && strings.Contains(part, "]") {
 				k := strings.Split(part, "[")[0]
 				index := parseArrayIndex(part)
@@ -162,4 +162,3 @@ func parseArrayIndex(part string) int {
 	index, _ := strconv.Atoi(indexStr)
 	return index
 }
-

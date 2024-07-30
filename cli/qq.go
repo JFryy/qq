@@ -18,11 +18,11 @@ func CreateRootCmd() *cobra.Command {
 	var interactive bool
 	var version bool
 	var help bool
-    var encodings string
-    for _, t := range codec.SupportedFileTypes {
-        encodings += t.Ext.String() + ", "
-    }
-    encodings = strings.TrimSuffix(encodings, ", ")
+	var encodings string
+	for _, t := range codec.SupportedFileTypes {
+		encodings += t.Ext.String() + ", "
+	}
+	encodings = strings.TrimSuffix(encodings, ", ")
 	v := "v0.2.1"
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
