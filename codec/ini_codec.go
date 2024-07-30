@@ -20,7 +20,7 @@ func iniUnmarshal(input []byte, v interface{}) error {
 		}
 		sectionMap := make(map[string]interface{})
 		for _, key := range section.Keys() {
-			sectionMap[key.Name()] = key.Value()
+			sectionMap[key.Name()] = parseValue(key.Value())
 		}
 		data[section.Name()] = sectionMap
 	}

@@ -3,6 +3,7 @@ package codec
 import (
 	"fmt"
 	"github.com/clbanning/mxj/v2"
+	"reflect"
 )
 
 func xmlMarshal(v interface{}) ([]byte, error) {
@@ -24,6 +25,35 @@ func xmlUnmarshal(input []byte, v interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error unmarshaling XML: %v", err)
 	}
-	*v.(*interface{}) = mv.Old()
+
+	parsedData := parseXMLValues(mv.Old())
+
+    // reflection of values required for type assertions on interface
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return fmt.Errorf("provided value must be a non-nil pointer")
+	}
+	rv.Elem().Set(reflect.ValueOf(parsedData))
+
 	return nil
+}
+
+// infer the type of the value and parse it accordingly
+func parseXMLValues(v interface{}) interface{} {
+	switch v := v.(type) {
+	case map[string]interface{}:
+		for key, val := range v {
+			v[key] = parseXMLValues(val)
+		}
+		return v
+	case []interface{}:
+		for i, val := range v {
+			v[i] = parseXMLValues(val)
+		}
+		return v
+	case string:
+		return parseValue(v)
+	default:
+		return v
+	}
 }
