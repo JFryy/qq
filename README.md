@@ -61,15 +61,17 @@ echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 * support a wide range of configuration formats and transform them interchangeably between eachother.
 * quick and comprehensive querying of configuration formats without needing a pipeline of dedicated tools.
 * provide an interactive mode for building queries with autocomplete and realtime rendering preview.
-* `qq` is broad, but performant encodings are still a priority, execution is quite fast despite covering a broad range of codecs. `qq` performs competitively with dedicated tools for a given format.
+* `qq` is broad, but performant encodings are still a priority, execution is quite fast despite covering a broad range of codecs. `qq` performs comparitively with dedicated tools for a given format.
 
-note: these improvements generally only occur on large files and are miniscule otherwise.
+### Rough Benchmarks
+note: these improvements generally only occur on large files and are miniscule otherwise. qq may be slower than dedicated tools for a given format, but it is pretty fast for a broad range of formats.
+
 ```shell
 $ du -h large-file.json
 25M     large-file.json
 ```
 
-```
+```shell
 # gron large file bench
 
 $ time gron large-file.json --no-sort | rg -v '[1-4]' | gron --ungron --no-sort > /dev/null 2>&1
@@ -91,7 +93,7 @@ $ time qq large-file.json -o yaml > /dev/null 2>&1
 qq large-file.json -o yaml > /dev/null 2>&1  2.72s user 0.16s system 190% cpu 1.519 total
 ```
 
-## Supported formats
+## Supported Formats
 Note: these unsupported formats are on a roadmap for inclusion.
 | Format      | Input          | Output         |
 |-------------|----------------|----------------|
@@ -107,6 +109,7 @@ Note: these unsupported formats are on a roadmap for inclusion.
 | Protobuf    | ❌ Not Supported | ❌ Not Supported |
 | HTML        | ✅ Supported   | ❌ Not Supported |
 | TXT (newline)| ✅ Supported   | ❌ Not Supported |
+| MD | ✅ Supported   | ❌ Not Supported |
 
 
 ## Caveats

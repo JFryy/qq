@@ -25,10 +25,11 @@ const (
 	HTML
 	LINE
 	TXT
+    MD
 )
 
 func (e EncodingType) String() string {
-	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt"}[e]
+	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt", "md"}[e]
 }
 
 type Encoding struct {
@@ -65,6 +66,7 @@ var SupportedFileTypes = []Encoding{
 	{HTML, htmlUnmarshal, jsonMarshalIndent},
 	{LINE, lineUnmarshal, jsonMarshalIndent},
 	{TXT, lineUnmarshal, jsonMarshalIndent},
+    {MD, markdownUnmarshal, jsonMarshalIndent},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data interface{}) error {

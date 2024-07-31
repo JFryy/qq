@@ -9,13 +9,10 @@ import (
 
 /*
 TODO:
-* convert title to top level key, convert sections to keys under title or section, so nested maps rather than lists
-* table parsing, skip ---- content
+* add support for nested headings
+* get hyperlink paragraph, list content but also append to hyperlink field
+* remove header key from sections, it is redundant
 */
-type ReadmeContent struct {
-	Title    string        `json:"title"`
-	Sections []interface{} `json:"sections"`
-}
 
 type CodeBlock struct {
 	Language string `json:"language"`
@@ -44,10 +41,23 @@ func markdownUnmarshal(data []byte, v interface{}) error {
 	return json.Unmarshal(jsonData, v)
 }
 
-func parseReadme(content string) ReadmeContent {
+func parseHyperlink(line string) *Hyperlink {
+	re := regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
+	matches := re.FindStringSubmatch(line)
+	if len(matches) == 3 {
+		return &Hyperlink{
+			Text: matches[1],
+			URL:  matches[2],
+		}
+	}
+	return nil
+}
+
+func parseReadme(content string) interface{} {
 	lines := strings.Split(content, "\n")
-	var sections []interface{}
-	var currentSection map[string]interface{}
+	sections := make(map[string]interface{})
+	var currentSection *map[string]interface{}
+	var currentSubsection *map[string]interface{}
 	var title string
 	var table Table
 	var list []string
@@ -57,6 +67,7 @@ func parseReadme(content string) ReadmeContent {
 	codeContent := []string{}
 	headers := []string{}
 	inList := false
+	var currentHeading string
 
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
@@ -73,7 +84,11 @@ func parseReadme(content string) ReadmeContent {
 					Language: codeLanguage,
 					Text:     strings.Join(codeContent, "\n"),
 				}
-				addToCurrentSection(&currentSection, "code_blocks", codeBlock)
+				if currentSubsection != nil {
+					addToCurrentSubsection(currentSubsection, "blocks", codeBlock)
+				} else if currentSection != nil {
+					addToCurrentSubsection(currentSection, "blocks", codeBlock)
+				}
 			}
 			continue
 		}
@@ -88,36 +103,58 @@ func parseReadme(content string) ReadmeContent {
 			if title == "" {
 				title = strings.TrimSpace(trimmedLine[2:])
 			} else {
-				if currentSection != nil {
+				// Finalize the current section before starting a new one
+				if currentSubsection != nil {
 					if len(list) > 0 {
-						addToCurrentSection(&currentSection, "lists", list)
+						addToCurrentSubsection(currentSubsection, "lists", list)
 						list = []string{}
 					}
-					sections = append(sections, currentSection)
+					if currentSection != nil {
+                        heading := (*currentSubsection)["heading"].(string)
+						addToCurrentSubsection(currentSection, heading, *currentSubsection)
+					}
+					currentSubsection = nil
 				}
-				currentSection = map[string]interface{}{
-					"heading": strings.TrimSpace(trimmedLine[2:]),
+				if currentSection != nil {
+					if len(list) > 0 {
+						addToCurrentSubsection(currentSection, "lists", list)
+						list = []string{}
+					}
+					sections[currentHeading] = *currentSection
 				}
 			}
+			currentHeading = strings.TrimSpace(trimmedLine[2:])
+			newSection := make(map[string]interface{})
+			currentSection = &newSection
 			inList = false
-		} else if strings.HasPrefix(trimmedLine, "## ") {
-			// New section heading
+		} else if strings.HasPrefix(trimmedLine, "##") {
+			// New subsection heading
 			if currentSection != nil {
 				if len(list) > 0 {
-					addToCurrentSection(&currentSection, "lists", list)
+					addToCurrentSubsection(currentSection, "lists", list)
 					list = []string{}
 				}
-				sections = append(sections, currentSection)
-			}
-			currentSection = map[string]interface{}{
-				"heading": strings.TrimSpace(trimmedLine[3:]),
+				if currentSubsection != nil {
+					if len(list) > 0 {
+						addToCurrentSubsection(currentSubsection, "lists", list)
+						list = []string{}
+					}
+                    heading := (*currentSubsection)["heading"].(string)
+					addToCurrentSubsection(currentSection, heading, *currentSubsection)
+				}
+				newSubsection := make(map[string]interface{})
+				currentSubsection = &newSubsection
+				(*currentSubsection)["heading"] = strings.TrimSpace(trimmedLine[3:])
 			}
 			inList = false
 		} else if strings.HasPrefix(trimmedLine, "- ") || strings.HasPrefix(trimmedLine, "* ") {
-			// List item
-			if !inList && currentSection != nil {
+			if !inList && (currentSection != nil || currentSubsection != nil) {
 				if len(list) > 0 {
-					addToCurrentSection(&currentSection, "lists", list)
+					if currentSubsection != nil {
+						addToCurrentSubsection(currentSubsection, "lists", list)
+					} else {
+						addToCurrentSubsection(currentSection, "lists", list)
+					}
 					list = []string{}
 				}
 				inList = true
@@ -127,7 +164,10 @@ func parseReadme(content string) ReadmeContent {
 			}
 			continue
 		} else if strings.Contains(trimmedLine, "|") && !inCodeBlock {
-			// Table
+            // skip below table header
+            if strings.HasPrefix(trimmedLine, "|-") {
+                continue
+            }
 			inTable = true
 			cells := strings.Split(trimmedLine, "|")
 			for i := range cells {
@@ -150,23 +190,39 @@ func parseReadme(content string) ReadmeContent {
 			inList = false
 		} else if hyperlink := parseHyperlink(trimmedLine); hyperlink != nil {
 			// Hyperlink
-			addToCurrentSection(&currentSection, "hyperlinks", hyperlink)
+			if currentSubsection != nil {
+				addToCurrentSubsection(currentSubsection, "hyperlinks", hyperlink)
+			} else if currentSection != nil {
+				addToCurrentSubsection(currentSection, "hyperlinks", hyperlink)
+			}
 			inList = false
 		} else if trimmedLine != "" {
 			// Paragraph (non-empty)
 			if currentSection != nil && !inCodeBlock && !inTable {
 				if len(list) > 0 {
-					addToCurrentSection(&currentSection, "lists", list)
+					if currentSubsection != nil {
+						addToCurrentSubsection(currentSubsection, "lists", list)
+					} else {
+						addToCurrentSubsection(currentSection, "lists", list)
+					}
 					list = []string{}
 					inList = false
 				}
-				addToCurrentSection(&currentSection, "paragraphs", trimmedLine)
+				if currentSubsection != nil {
+					addToCurrentSubsection(currentSubsection, "paragraphs", trimmedLine)
+				} else {
+					addToCurrentSubsection(currentSection, "paragraphs", trimmedLine)
+				}
 			}
 		}
 
 		if len(trimmedLine) == 0 || strings.HasPrefix(trimmedLine, "# ") || strings.HasPrefix(trimmedLine, "## ") {
 			if len(list) > 0 {
-				addToCurrentSection(&currentSection, "lists", list)
+				if currentSubsection != nil {
+					addToCurrentSubsection(currentSubsection, "lists", list)
+				} else if currentSection != nil {
+					addToCurrentSubsection(currentSection, "lists", list)
+				}
 				list = []string{}
 				inList = false
 			}
@@ -174,7 +230,11 @@ func parseReadme(content string) ReadmeContent {
 
 		if inTable && len(trimmedLine) == 0 {
 			if len(table) > 0 {
-				addToCurrentSection(&currentSection, "tables", table)
+				if currentSubsection != nil {
+					addToCurrentSubsection(currentSubsection, "tables", table)
+				} else if currentSection != nil {
+					addToCurrentSubsection(currentSection, "tables", table)
+				}
 				table = nil
 			}
 			inTable = false
@@ -183,67 +243,33 @@ func parseReadme(content string) ReadmeContent {
 	}
 
 	if len(list) > 0 {
-		addToCurrentSection(&currentSection, "lists", list)
+		if currentSubsection != nil {
+			addToCurrentSubsection(currentSubsection, "lists", list)
+		} else if currentSection != nil {
+			addToCurrentSubsection(currentSection, "lists", list)
+		}
+	}
+	if currentSubsection != nil {
+		if currentSection != nil {
+            heading := (*currentSubsection)["heading"].(string)
+			addToCurrentSubsection(currentSection, heading, *currentSubsection)
+		}
 	}
 	if currentSection != nil {
-		sections = append(sections, currentSection)
+		sections[currentHeading] = *currentSection
 	}
 
-	return ReadmeContent{
-		Title:    title,
-		Sections: filterEmptyParagraphs(sections),
-	}
+    return sections
 }
 
-func parseHyperlink(line string) *Hyperlink {
-	// Regex to match Markdown hyperlinks: [text](url)
-	re := regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
-	matches := re.FindStringSubmatch(line)
-	if len(matches) == 3 {
-		return &Hyperlink{
-			Text: matches[1],
-			URL:  matches[2],
-		}
+func addToCurrentSubsection(subsection *map[string]interface{}, key string, value interface{}) {
+	if subsection == nil || *subsection == nil {
+		return
 	}
-	return nil
-}
-
-func addToCurrentSection(section *map[string]interface{}, key string, value interface{}) {
-	if *section == nil {
-		*section = make(map[string]interface{})
+	if existing, ok := (*subsection)[key].([]interface{}); ok {
+		(*subsection)[key] = append(existing, value)
+	} else {
+		(*subsection)[key] = []interface{}{value}
 	}
-	if (*section)[key] == nil {
-		(*section)[key] = []interface{}{}
-	}
-	(*section)[key] = append((*section)[key].([]interface{}), value)
-}
-
-func filterEmptyParagraphs(sections []interface{}) []interface{} {
-	var filteredSections []interface{}
-
-	for _, section := range sections {
-		sec, ok := section.(map[string]interface{})
-		if !ok {
-			filteredSections = append(filteredSections, section)
-			continue
-		}
-
-		if paragraphs, ok := sec["paragraphs"].([]interface{}); ok {
-			var nonEmptyParagraphs []interface{}
-			for _, para := range paragraphs {
-				if paraStr, ok := para.(string); ok && strings.TrimSpace(paraStr) != "" {
-					nonEmptyParagraphs = append(nonEmptyParagraphs, para)
-				}
-			}
-			if len(nonEmptyParagraphs) > 0 {
-				sec["paragraphs"] = nonEmptyParagraphs
-				filteredSections = append(filteredSections, sec)
-			}
-		} else {
-			filteredSections = append(filteredSections, sec)
-		}
-	}
-
-	return filteredSections
 }
 
