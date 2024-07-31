@@ -113,9 +113,9 @@ Note: these unsupported formats are on a roadmap for inclusion.
 
 
 ## Caveats
-* `qq` is not a full `jq`/`*q` replacement and comes with idiosyncrasies from the underlying `gojq` library.
-* the encoders and decoders are not perfect and may not be able to handle all edge cases.
-* `qq` is under active development and more codecs are intended to be supported along with improvements to `interactive mode`.
+1. `qq` is not a full `jq`/`*q` replacement and comes with idiosyncrasies from the underlying `gojq` library.
+2. the encoders and decoders are not perfect and may not be able to handle all edge cases.
+3. `qq` is under active development and more codecs are intended to be supported along with improvements to `interactive mode`.
 
 
 ## Contributions

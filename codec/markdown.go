@@ -15,8 +15,8 @@ TODO:
 */
 
 type CodeBlock struct {
-	Language string `json:"language"`
-	Text     string `json:"text"`
+	Lang string `json:"lang"`
+	Text string `json:"text"`
 }
 
 type Hyperlink struct {
@@ -61,6 +61,7 @@ func parseReadme(content string) interface{} {
 	var title string
 	var table Table
 	var list []string
+	var orderedList []string
 	inCodeBlock := false
 	inTable := false
 	codeLanguage := ""
@@ -72,33 +73,31 @@ func parseReadme(content string) interface{} {
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 
-		if strings.HasPrefix(trimmedLine, "```") {
+		switch {
+		case strings.HasPrefix(trimmedLine, "```"):
 			// Toggle code block state
 			inCodeBlock = !inCodeBlock
-
 			if inCodeBlock {
 				codeLanguage = strings.TrimSpace(trimmedLine[3:])
 				codeContent = []string{}
 			} else {
 				codeBlock := CodeBlock{
-					Language: codeLanguage,
-					Text:     strings.Join(codeContent, "\n"),
+					Lang: codeLanguage,
+					Text: strings.Join(codeContent, "\n"),
 				}
 				if currentSubsection != nil {
-					addToCurrentSubsection(currentSubsection, "blocks", codeBlock)
+					addToCurrentSubsection(currentSubsection, "code", codeBlock)
 				} else if currentSection != nil {
-					addToCurrentSubsection(currentSection, "blocks", codeBlock)
+					addToCurrentSubsection(currentSection, "code", codeBlock)
 				}
 			}
 			continue
-		}
 
-		if inCodeBlock {
+		case inCodeBlock:
 			codeContent = append(codeContent, line)
 			continue
-		}
 
-		if strings.HasPrefix(trimmedLine, "# ") {
+		case strings.HasPrefix(trimmedLine, "# "):
 			// New top-level heading (title)
 			if title == "" {
 				title = strings.TrimSpace(trimmedLine[2:])
@@ -110,7 +109,7 @@ func parseReadme(content string) interface{} {
 						list = []string{}
 					}
 					if currentSection != nil {
-                        heading := (*currentSubsection)["heading"].(string)
+						heading := (*currentSubsection)["heading"].(string)
 						addToCurrentSubsection(currentSection, heading, *currentSubsection)
 					}
 					currentSubsection = nil
@@ -127,7 +126,8 @@ func parseReadme(content string) interface{} {
 			newSection := make(map[string]interface{})
 			currentSection = &newSection
 			inList = false
-		} else if strings.HasPrefix(trimmedLine, "##") {
+
+		case strings.HasPrefix(trimmedLine, "##"):
 			// New subsection heading
 			if currentSection != nil {
 				if len(list) > 0 {
@@ -139,7 +139,7 @@ func parseReadme(content string) interface{} {
 						addToCurrentSubsection(currentSubsection, "lists", list)
 						list = []string{}
 					}
-                    heading := (*currentSubsection)["heading"].(string)
+					heading := (*currentSubsection)["heading"].(string)
 					addToCurrentSubsection(currentSection, heading, *currentSubsection)
 				}
 				newSubsection := make(map[string]interface{})
@@ -147,7 +147,8 @@ func parseReadme(content string) interface{} {
 				(*currentSubsection)["heading"] = strings.TrimSpace(trimmedLine[3:])
 			}
 			inList = false
-		} else if strings.HasPrefix(trimmedLine, "- ") || strings.HasPrefix(trimmedLine, "* ") {
+
+		case strings.HasPrefix(trimmedLine, "- ") || strings.HasPrefix(trimmedLine, "* "):
 			if !inList && (currentSection != nil || currentSubsection != nil) {
 				if len(list) > 0 {
 					if currentSubsection != nil {
@@ -163,11 +164,30 @@ func parseReadme(content string) interface{} {
 				list = append(list, strings.TrimSpace(trimmedLine[2:]))
 			}
 			continue
-		} else if strings.Contains(trimmedLine, "|") && !inCodeBlock {
-            // skip below table header
-            if strings.HasPrefix(trimmedLine, "|-") {
-                continue
+
+		case strings.HasPrefix(trimmedLine, "1. ") || strings.HasPrefix(trimmedLine, "1) "):
+			if !inList && (currentSection != nil || currentSubsection != nil) {
+                if len(orderedList) > 0 {
+                    if currentSubsection != nil {
+                        addToCurrentSubsection(currentSubsection, "ol", orderedList)
+                    } else {
+                        addToCurrentSubsection(currentSection, "ol", orderedList)
+                        
+                    }
+                    orderedList = []string{}
+                }
+                inList = true
             }
+            if inList {
+                orderedList = append(orderedList, strings.TrimSpace(trimmedLine[3:]))
+            }
+            continue
+
+		case strings.Contains(trimmedLine, "|") && !inCodeBlock:
+			// skip below table header
+			if strings.HasPrefix(trimmedLine, "|-") {
+				continue
+			}
 			inTable = true
 			cells := strings.Split(trimmedLine, "|")
 			for i := range cells {
@@ -188,22 +208,25 @@ func parseReadme(content string) interface{} {
 				}
 			}
 			inList = false
-		} else if hyperlink := parseHyperlink(trimmedLine); hyperlink != nil {
+
+		case parseHyperlink(trimmedLine) != nil:
 			// Hyperlink
+			hyperlink := parseHyperlink(trimmedLine)
 			if currentSubsection != nil {
-				addToCurrentSubsection(currentSubsection, "hyperlinks", hyperlink)
+				addToCurrentSubsection(currentSubsection, "links", hyperlink)
 			} else if currentSection != nil {
-				addToCurrentSubsection(currentSection, "hyperlinks", hyperlink)
+				addToCurrentSubsection(currentSection, "links", hyperlink)
 			}
 			inList = false
-		} else if trimmedLine != "" {
+
+		case trimmedLine != "":
 			// Paragraph (non-empty)
 			if currentSection != nil && !inCodeBlock && !inTable {
 				if len(list) > 0 {
 					if currentSubsection != nil {
-						addToCurrentSubsection(currentSubsection, "lists", list)
+						addToCurrentSubsection(currentSubsection, "li", list)
 					} else {
-						addToCurrentSubsection(currentSection, "lists", list)
+						addToCurrentSubsection(currentSection, "li", list)
 					}
 					list = []string{}
 					inList = false
@@ -214,26 +237,24 @@ func parseReadme(content string) interface{} {
 					addToCurrentSubsection(currentSection, "paragraphs", trimmedLine)
 				}
 			}
-		}
 
-		if len(trimmedLine) == 0 || strings.HasPrefix(trimmedLine, "# ") || strings.HasPrefix(trimmedLine, "## ") {
+		case len(trimmedLine) == 0 || strings.HasPrefix(trimmedLine, "# ") || strings.HasPrefix(trimmedLine, "## "):
 			if len(list) > 0 {
 				if currentSubsection != nil {
-					addToCurrentSubsection(currentSubsection, "lists", list)
+					addToCurrentSubsection(currentSubsection, "li", list)
 				} else if currentSection != nil {
-					addToCurrentSubsection(currentSection, "lists", list)
+					addToCurrentSubsection(currentSection, "li", list)
 				}
 				list = []string{}
 				inList = false
 			}
-		}
 
-		if inTable && len(trimmedLine) == 0 {
+		case inTable && len(trimmedLine) == 0:
 			if len(table) > 0 {
 				if currentSubsection != nil {
-					addToCurrentSubsection(currentSubsection, "tables", table)
+					addToCurrentSubsection(currentSubsection, "table", table)
 				} else if currentSection != nil {
-					addToCurrentSubsection(currentSection, "tables", table)
+					addToCurrentSubsection(currentSection, "table", table)
 				}
 				table = nil
 			}
@@ -244,14 +265,14 @@ func parseReadme(content string) interface{} {
 
 	if len(list) > 0 {
 		if currentSubsection != nil {
-			addToCurrentSubsection(currentSubsection, "lists", list)
+			addToCurrentSubsection(currentSubsection, "li", list)
 		} else if currentSection != nil {
-			addToCurrentSubsection(currentSection, "lists", list)
+			addToCurrentSubsection(currentSection, "li", list)
 		}
 	}
 	if currentSubsection != nil {
 		if currentSection != nil {
-            heading := (*currentSubsection)["heading"].(string)
+			heading := (*currentSubsection)["heading"].(string)
 			addToCurrentSubsection(currentSection, heading, *currentSubsection)
 		}
 	}
@@ -259,7 +280,7 @@ func parseReadme(content string) interface{} {
 		sections[currentHeading] = *currentSection
 	}
 
-    return sections
+	return sections
 }
 
 func addToCurrentSubsection(subsection *map[string]interface{}, key string, value interface{}) {
@@ -272,4 +293,3 @@ func addToCurrentSubsection(subsection *map[string]interface{}, key string, valu
 		(*subsection)[key] = []interface{}{value}
 	}
 }
-
