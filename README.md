@@ -4,7 +4,6 @@
 
 ## Usage
 Here's some example usage, this emphasizes the interactive mode for demonstrantion, but `qq` is designed for usage in shell scripts.
-```shell
 ![Demo GIF](docs/demo.gif)
 
 
@@ -21,7 +20,6 @@ qq file.xml -o gron | grep -vE "sweet.potatoes" | qq -i gron
 
 # get some content from a site with html input
 curl motherfuckingwebsite.com | bin/qq -i html '.html.body.ul.li[0]'
-
 
 # interactive query builder mode on target file
 qq . file.json --interactive
