@@ -3,8 +3,9 @@
 `qq` is a interoperable configuration format transcoder with `jq` query syntax powered by `gojq`. `qq` is multi modal, and can be used as a replacement for `jq` or be interacted with via a repl with autocomplete and realtime rendering preview for building queries.
 
 ## Usage
-Basic usage:
-<a href="https://asciinema.org/a/665317" target="_blank"><img src="https://asciinema.org/a/665317.svg" /></a>
+Here's some example usage, this emphasizes the interactive mode for demonstrantion, but `qq` is designed for usage in shell scripts.
+```shell
+![Demo GIF](docs/demo.gif)
 
 
 
