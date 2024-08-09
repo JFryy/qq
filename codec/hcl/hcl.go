@@ -1,4 +1,4 @@
-package codec
+package hcl
 
 import (
 	"fmt"
@@ -9,7 +9,9 @@ import (
 	"log"
 )
 
-func hclUnmarshal(input []byte, v interface{}) error {
+type Codec struct{}
+
+func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 	opts := convert.Options{}
 	content, err := convert.Bytes(input, "json", opts)
 	if err != nil {
@@ -18,7 +20,7 @@ func hclUnmarshal(input []byte, v interface{}) error {
 	return json.Unmarshal(content, v)
 }
 
-func hclMarshal(v interface{}) ([]byte, error) {
+func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	// Ensure the input is wrapped in a map if it's not already
 	var data map[string]interface{}
 	switch v := v.(type) {
@@ -29,9 +31,7 @@ func hclMarshal(v interface{}) ([]byte, error) {
 			"data": v,
 		}
 	}
-
-	// Convert map to HCL
-	hclData, err := convertMapToHCL(data)
+	hclData, err := c.convertMapToHCL(data)
 	if err != nil {
 		return nil, fmt.Errorf("error converting map to HCL: %v", err)
 	}
@@ -39,26 +39,19 @@ func hclMarshal(v interface{}) ([]byte, error) {
 	return hclData, nil
 }
 
-func convertMapToHCL(data map[string]interface{}) ([]byte, error) {
-	// Create a new HCL file
+func (c *Codec) convertMapToHCL(data map[string]interface{}) ([]byte, error) {
 	f := hclwrite.NewEmptyFile()
-
-	// Create the root body of the file
 	rootBody := f.Body()
-
-	// Populate the body with the data
-	populateBody(rootBody, data)
-
-	// Return the HCL data
+	c.populateBody(rootBody, data)
 	return f.Bytes(), nil
 }
 
-func populateBody(body *hclwrite.Body, data map[string]interface{}) {
+func (c *Codec) populateBody(body *hclwrite.Body, data map[string]interface{}) {
 	for key, value := range data {
 		switch v := value.(type) {
 		case map[string]interface{}:
 			block := body.AppendNewBlock(key, nil)
-			populateBody(block.Body(), v)
+			c.populateBody(block.Body(), v)
 		case string:
 			body.SetAttributeValue(key, cty.StringVal(v))
 		case int:
@@ -72,7 +65,7 @@ func populateBody(body *hclwrite.Body, data map[string]interface{}) {
 		case []interface{}:
 			tuple := make([]cty.Value, len(v))
 			for i, elem := range v {
-				tuple[i] = convertToCtyValue(elem)
+				tuple[i] = c.convertToCtyValue(elem)
 			}
 			body.SetAttributeValue(key, cty.TupleVal(tuple))
 		default:
@@ -81,7 +74,7 @@ func populateBody(body *hclwrite.Body, data map[string]interface{}) {
 	}
 }
 
-func convertToCtyValue(value interface{}) cty.Value {
+func (c *Codec) convertToCtyValue(value interface{}) cty.Value {
 	switch v := value.(type) {
 	case string:
 		return cty.StringVal(v)
@@ -96,13 +89,13 @@ func convertToCtyValue(value interface{}) cty.Value {
 	case []interface{}:
 		tuple := make([]cty.Value, len(v))
 		for i, elem := range v {
-			tuple[i] = convertToCtyValue(elem)
+			tuple[i] = c.convertToCtyValue(elem)
 		}
 		return cty.TupleVal(tuple)
 	case map[string]interface{}:
 		vals := make(map[string]cty.Value)
 		for k, elem := range v {
-			vals[k] = convertToCtyValue(elem)
+			vals[k] = c.convertToCtyValue(elem)
 		}
 		return cty.ObjectVal(vals)
 	default:

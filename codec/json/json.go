@@ -1,11 +1,14 @@
-package codec
+package json
 
 import (
 	"bytes"
 	"github.com/goccy/go-json"
 )
 
-func jsonMarshal(v interface{}) ([]byte, error) {
+type Codec struct {}
+
+
+func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 	encoder.SetEscapeHTML(false)

@@ -1,15 +1,18 @@
-package codec
+package csv
 
 import (
 	"bytes"
 	"encoding/csv"
 	"fmt"
+	"github.com/JFryy/qq/codec/util"
 	"github.com/goccy/go-json"
 	"io"
 	"strings"
 )
 
-func detectDelimiter(input []byte) rune {
+type Codec struct{}
+
+func (c *Codec) detectDelimiter(input []byte) rune {
 	lines := bytes.Split(input, []byte("\n"))
 	if len(lines) < 2 {
 		return ','
@@ -34,8 +37,8 @@ func detectDelimiter(input []byte) rune {
 	return maxDelimiter
 }
 
-func csvUnmarshal(input []byte, v interface{}) error {
-	delimiter := detectDelimiter(input)
+func (c *Codec) Unmarshal(input []byte, v interface{}) error {
+	delimiter := c.detectDelimiter(input)
 	r := csv.NewReader(strings.NewReader(string(input)))
 	r.Comma = delimiter
 	r.TrimLeadingSpace = true
@@ -56,7 +59,7 @@ func csvUnmarshal(input []byte, v interface{}) error {
 
 		rowMap := make(map[string]interface{})
 		for i, header := range headers {
-			rowMap[header] = parseValue(record[i])
+			rowMap[header] = util.ParseValue(record[i])
 		}
 		records = append(records, rowMap)
 	}

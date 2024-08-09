@@ -1,13 +1,16 @@
-package codec
+package ini
 
 import (
 	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/ini.v1"
 	"strings"
+    "github.com/JFryy/qq/codec/util"
 )
 
-func iniUnmarshal(input []byte, v interface{}) error {
+type Codec struct{}
+
+func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 	cfg, err := ini.Load(input)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling INI: %v", err)
@@ -20,7 +23,7 @@ func iniUnmarshal(input []byte, v interface{}) error {
 		}
 		sectionMap := make(map[string]interface{})
 		for _, key := range section.Keys() {
-			sectionMap[key.Name()] = parseValue(key.Value())
+			sectionMap[key.Name()] = util.ParseValue(key.Value())
 		}
 		data[section.Name()] = sectionMap
 	}
@@ -28,7 +31,7 @@ func iniUnmarshal(input []byte, v interface{}) error {
 	return mapstructure.Decode(data, v)
 }
 
-func iniMarshal(v interface{}) ([]byte, error) {
+func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	data, ok := v.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("input data is not a map")

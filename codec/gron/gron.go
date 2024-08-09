@@ -1,15 +1,18 @@
-package codec
+package gron
 
 import (
 	"bytes"
 	"fmt"
 	"github.com/goccy/go-json"
+    "github.com/JFryy/qq/codec/util"
 	"reflect"
 	"strconv"
 	"strings"
 )
 
-func gronUnmarshal(data []byte, v interface{}) error {
+type Codec struct{}
+
+func (c *Codec) Unmarshal(data []byte, v interface{}) error {
 	lines := strings.Split(string(data), "\n")
 	var isArray bool
 	dataMap := make(map[string]interface{})
@@ -26,13 +29,13 @@ func gronUnmarshal(data []byte, v interface{}) error {
 
 		key := strings.TrimSpace(parts[0])
 		value := strings.Trim(parts[1], `";`)
-		parsedValue := parseValue(value)
+		parsedValue := util.ParseValue(value)
 
 		if strings.HasPrefix(key, "[") && strings.Contains(key, "]") {
 			isArray = true
 		}
 
-		setValueJSON(dataMap, key, parsedValue)
+		c.setValueJSON(dataMap, key, parsedValue)
 	}
 
 	if isArray && len(dataMap) == 1 {
@@ -56,23 +59,23 @@ func gronUnmarshal(data []byte, v interface{}) error {
 	return nil
 }
 
-func gronMarshal(v interface{}) ([]byte, error) {
+func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer
-	traverseJSON("", v, &buf)
+	c.traverseJSON("", v, &buf)
 	return buf.Bytes(), nil
 }
 
-func traverseJSON(prefix string, v interface{}, buf *bytes.Buffer) {
+func (c *Codec) traverseJSON(prefix string, v interface{}, buf *bytes.Buffer) {
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 	case reflect.Map:
 		for _, key := range rv.MapKeys() {
 			strKey := fmt.Sprintf("%v", key)
-			traverseJSON(addPrefix(prefix, strKey), rv.MapIndex(key).Interface(), buf)
+			c.traverseJSON(addPrefix(prefix, strKey), rv.MapIndex(key).Interface(), buf)
 		}
 	case reflect.Slice:
 		for i := 0; i < rv.Len(); i++ {
-			traverseJSON(fmt.Sprintf("%s[%d]", prefix, i), rv.Index(i).Interface(), buf)
+			c.traverseJSON(fmt.Sprintf("%s[%d]", prefix, i), rv.Index(i).Interface(), buf)
 		}
 	default:
 		buf.WriteString(fmt.Sprintf("%s = %s;\n", prefix, formatJSONValue(v)))
@@ -106,7 +109,7 @@ func formatJSONValue(v interface{}) string {
 	}
 }
 
-func setValueJSON(data map[string]interface{}, key string, value interface{}) {
+func (c *Codec) setValueJSON(data map[string]interface{}, key string, value interface{}) {
 	parts := strings.Split(key, ".")
 	var m = data
 	for i, part := range parts {
