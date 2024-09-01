@@ -1,11 +1,27 @@
 package codec
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/BurntSushi/toml"
+	"github.com/alecthomas/chroma"
+	"github.com/alecthomas/chroma/formatters"
+	"github.com/alecthomas/chroma/lexers"
+	"github.com/alecthomas/chroma/styles"
 	"github.com/goccy/go-json"
 	"github.com/goccy/go-yaml"
+	"github.com/mattn/go-isatty"
+	"os"
 	"strings"
+	// dedicated codec packages and wrappers where appropriate
+	"github.com/JFryy/qq/codec/csv"
+	"github.com/JFryy/qq/codec/gron"
+	"github.com/JFryy/qq/codec/hcl"
+	"github.com/JFryy/qq/codec/html"
+	"github.com/JFryy/qq/codec/ini"
+	qqjson "github.com/JFryy/qq/codec/json"
+	"github.com/JFryy/qq/codec/line"
+	"github.com/JFryy/qq/codec/xml"
 )
 
 // EncodingType represents the supported encoding types as an enum with a string representation
@@ -25,20 +41,17 @@ const (
 	HTML
 	LINE
 	TXT
+	MD
 )
 
 func (e EncodingType) String() string {
-	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt"}[e]
+	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt", "md"}[e]
 }
 
 type Encoding struct {
 	Ext       EncodingType
 	Unmarshal func([]byte, interface{}) error
 	Marshal   func(interface{}) ([]byte, error)
-}
-
-func jsonMarshalIndent(v interface{}) ([]byte, error) {
-	return json.MarshalIndent(v, "", "  ")
 }
 
 func GetEncodingType(fileType string) (EncodingType, error) {
@@ -51,20 +64,30 @@ func GetEncodingType(fileType string) (EncodingType, error) {
 	return JSON, fmt.Errorf("unsupported file type: %v", fileType)
 }
 
+var (
+	htm   = html.Codec{}
+	jsn   = qqjson.Codec{} // wrapper for go-json marshal
+	grn   = gron.Codec{}
+	hcltf = hcl.Codec{}
+	xmll  = xml.Codec{}
+	inii  = ini.Codec{}
+	lines = line.Codec{}
+	sv    = csv.Codec{}
+)
 var SupportedFileTypes = []Encoding{
-	{JSON, json.Unmarshal, jsonMarshalIndent},
+	{JSON, json.Unmarshal, jsn.Marshal},
 	{YAML, yaml.Unmarshal, yaml.Marshal},
 	{YML, yaml.Unmarshal, yaml.Marshal},
-	{TOML, toml.Unmarshal, tomlMarshal},
-	{HCL, hclUnmarshal, hclMarshal},
-	{TF, hclUnmarshal, hclMarshal},
-	{CSV, csvUnmarshal, jsonMarshalIndent},
-	{XML, xmlUnmarshal, xmlMarshal},
-	{INI, iniUnmarshal, iniMarshal},
-	{GRON, gronUnmarshal, gronMarshal},
-	{HTML, htmlUnmarshal, jsonMarshalIndent},
-	{LINE, lineUnmarshal, jsonMarshalIndent},
-	{TXT, lineUnmarshal, jsonMarshalIndent},
+	{TOML, toml.Unmarshal, toml.Marshal},
+	{HCL, hcltf.Unmarshal, hcltf.Marshal},
+	{TF, hcltf.Unmarshal, hcltf.Marshal},
+	{CSV, sv.Unmarshal, jsn.Marshal},
+	{XML, xmll.Unmarshal, xmll.Marshal},
+	{INI, inii.Unmarshal, inii.Marshal},
+	{GRON, grn.Unmarshal, grn.Marshal},
+	{HTML, htm.Unmarshal, jsn.Marshal},
+	{LINE, lines.Unmarshal, jsn.Marshal},
+	{TXT, lines.Unmarshal, jsn.Marshal},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data interface{}) error {
@@ -92,4 +115,57 @@ func Marshal(v interface{}, outputFileType EncodingType) ([]byte, error) {
 		}
 	}
 	return nil, fmt.Errorf("unsupported output file type: %v", outputFileType)
+}
+
+func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
+	if raw {
+		var v interface{}
+		err := Unmarshal([]byte(s), fileType, &v)
+		if err != nil {
+			return "", err
+		}
+		switch v.(type) {
+		case map[string]interface{}:
+			break
+		case []interface{}:
+			break
+		default:
+			return strings.ReplaceAll(s, "\"", ""), nil
+		}
+	}
+
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return s, nil
+	}
+
+	var lexer chroma.Lexer
+	// this a workaround for json lexer while we don't have a marshal function dedicated for these formats.
+	if fileType == CSV || fileType == HTML || fileType == LINE || fileType == TXT {
+		lexer = lexers.Get("json")
+	} else {
+		lexer = lexers.Get(fileType.String())
+		if lexer == nil {
+			lexer = lexers.Fallback
+		}
+	}
+
+	if lexer == nil {
+		return "", fmt.Errorf("unsupported file type for formatting: %v", fileType)
+	}
+
+	iterator, err := lexer.Tokenise(nil, s)
+	if err != nil {
+		return "", fmt.Errorf("error tokenizing input: %v", err)
+	}
+
+	style := styles.Get("nord")
+	formatter := formatters.Get("terminal256")
+	var buffer bytes.Buffer
+
+	err = formatter.Format(&buffer, style, iterator)
+	if err != nil {
+		return "", fmt.Errorf("error formatting output: %v", err)
+	}
+
+	return buffer.String(), nil
 }

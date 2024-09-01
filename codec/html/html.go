@@ -1,4 +1,4 @@
-package codec
+package html
 
 import (
 	"bytes"
@@ -14,6 +14,20 @@ HTML to Map Converter. These functions do not yet cover conversion to HTML, only
 This implementation may have some limitations and may not cover all edge cases.
 */
 
+type Codec struct{}
+
+func (c *Codec) Unmarshal(data []byte, v interface{}) error {
+	htmlMap, err := c.HTMLToMap(data)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(htmlMap)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, v)
+}
+
 func decodeUnicodeEscapes(s string) (string, error) {
 	re := regexp.MustCompile(`\\u([0-9a-fA-F]{4})`)
 	return re.ReplaceAllStringFunc(s, func(match string) string {
@@ -26,19 +40,7 @@ func decodeUnicodeEscapes(s string) (string, error) {
 	}), nil
 }
 
-func htmlUnmarshal(data []byte, v interface{}) error {
-	htmlMap, err := HTMLToMap(data)
-	if err != nil {
-		return err
-	}
-	b, err := json.Marshal(htmlMap)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, v)
-}
-
-func HTMLToMap(htmlBytes []byte) (map[string]interface{}, error) {
+func (c *Codec) HTMLToMap(htmlBytes []byte) (map[string]interface{}, error) {
 	doc, err := html.Parse(bytes.NewReader(htmlBytes))
 	if err != nil {
 		return nil, err
@@ -57,14 +59,14 @@ func HTMLToMap(htmlBytes []byte) (map[string]interface{}, error) {
 		return nil, nil
 	}
 
-	result := nodeToMap(root)
+	result := c.nodeToMap(root)
 	if m, ok := result.(map[string]interface{}); ok {
 		return map[string]interface{}{"html": m}, nil
 	}
 	return nil, nil
 }
 
-func nodeToMap(node *html.Node) interface{} {
+func (c *Codec) nodeToMap(node *html.Node) interface{} {
 	m := make(map[string]interface{})
 
 	// Process attributes if present for node
@@ -99,7 +101,7 @@ func nodeToMap(node *html.Node) interface{} {
 				comments = append(comments, text)
 			}
 		case html.ElementNode:
-			childMap := nodeToMap(child)
+			childMap := c.nodeToMap(child)
 			if childMap != nil {
 				children[child.Data] = append(children[child.Data], childMap)
 			}

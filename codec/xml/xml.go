@@ -1,12 +1,15 @@
-package codec
+package xml
 
 import (
 	"fmt"
+	"github.com/JFryy/qq/codec/util"
 	"github.com/clbanning/mxj/v2"
 	"reflect"
 )
 
-func xmlMarshal(v interface{}) ([]byte, error) {
+type Codec struct{}
+
+func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	switch v := v.(type) {
 	case map[string]interface{}:
 		mv := mxj.Map(v)
@@ -20,13 +23,13 @@ func xmlMarshal(v interface{}) ([]byte, error) {
 	}
 }
 
-func xmlUnmarshal(input []byte, v interface{}) error {
+func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 	mv, err := mxj.NewMapXml(input)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling XML: %v", err)
 	}
 
-	parsedData := parseXMLValues(mv.Old())
+	parsedData := c.parseXMLValues(mv.Old())
 
 	// reflection of values required for type assertions on interface
 	rv := reflect.ValueOf(v)
@@ -39,20 +42,20 @@ func xmlUnmarshal(input []byte, v interface{}) error {
 }
 
 // infer the type of the value and parse it accordingly
-func parseXMLValues(v interface{}) interface{} {
+func (c *Codec) parseXMLValues(v interface{}) interface{} {
 	switch v := v.(type) {
 	case map[string]interface{}:
 		for key, val := range v {
-			v[key] = parseXMLValues(val)
+			v[key] = c.parseXMLValues(val)
 		}
 		return v
 	case []interface{}:
 		for i, val := range v {
-			v[i] = parseXMLValues(val)
+			v[i] = c.parseXMLValues(val)
 		}
 		return v
 	case string:
-		return parseValue(v)
+		return util.ParseValue(v)
 	default:
 		return v
 	}

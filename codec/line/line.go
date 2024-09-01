@@ -1,19 +1,22 @@
-package codec
+package line
 
 import (
 	"fmt"
+	"github.com/JFryy/qq/codec/util"
 	"github.com/goccy/go-json"
 	"reflect"
 	"strings"
 )
 
-func lineUnmarshal(input []byte, v interface{}) error {
+type Codec struct{}
+
+func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 	lines := strings.Split(strings.TrimSpace(string(input)), "\n")
 	var parsedLines []interface{}
 
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
-		parsedValue := parseValue(trimmedLine)
+		parsedValue := util.ParseValue(trimmedLine)
 		parsedLines = append(parsedLines, parsedValue)
 	}
 
