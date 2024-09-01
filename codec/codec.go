@@ -14,7 +14,6 @@ import (
 	"github.com/mattn/go-isatty"
 	"os"
     // dedicated codec packages and wrappers where appropriate
-    "github.com/JFryy/qq/codec/markdown"
     "github.com/JFryy/qq/codec/html"
     "github.com/JFryy/qq/codec/gron"
     "github.com/JFryy/qq/codec/hcl"
@@ -66,7 +65,6 @@ func GetEncodingType(fileType string) (EncodingType, error) {
 }
 
 var (
-    md = markdown.Codec{}
     htm = html.Codec{}
     jsn = qqjson.Codec{} // wrapper for go-json marshal
     grn = gron.Codec{}
@@ -90,7 +88,6 @@ var SupportedFileTypes = []Encoding{
 	{HTML, htm.Unmarshal, jsn.Marshal},
 	{LINE, lines.Unmarshal, jsn.Marshal},
 	{TXT, lines.Unmarshal, jsn.Marshal},
-    {MD, md.Unmarshal, jsn.Marshal},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data interface{}) error {
