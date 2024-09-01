@@ -109,7 +109,6 @@ Note: these unsupported formats are on a roadmap for inclusion.
 | Protobuf    | ❌ Not Supported | ❌ Not Supported |
 | HTML        | ✅ Supported   | ❌ Not Supported |
 | TXT (newline)| ✅ Supported   | ❌ Not Supported |
-| MD | ✅ Supported   | ❌ Not Supported |
 
 
 ## Caveats
