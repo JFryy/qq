@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-
 func ParseValue(value string) interface{} {
 	value = strings.TrimSpace(value)
 

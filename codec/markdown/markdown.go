@@ -20,8 +20,8 @@ type Hyperlink struct {
 type Table []map[string]string
 
 type Codec struct {
-	Section    map[string]interface{}
-	Subsection map[string]interface{}
+	Section     map[string]interface{}
+	Subsection  map[string]interface{}
 	InCodeBlock bool
 	InTable     bool
 }
@@ -295,4 +295,3 @@ func (m *Codec) addToSubsection(subsection *map[string]interface{}, key string, 
 		(*subsection)[key] = []interface{}{value}
 	}
 }
-

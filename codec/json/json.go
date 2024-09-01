@@ -5,8 +5,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
-type Codec struct {}
-
+type Codec struct{}
 
 func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer

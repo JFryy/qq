@@ -2,9 +2,9 @@ package xml
 
 import (
 	"fmt"
+	"github.com/JFryy/qq/codec/util"
 	"github.com/clbanning/mxj/v2"
 	"reflect"
-    "github.com/JFryy/qq/codec/util"
 )
 
 type Codec struct{}

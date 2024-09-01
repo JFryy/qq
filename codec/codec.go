@@ -1,27 +1,27 @@
 package codec
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/BurntSushi/toml"
-	"github.com/goccy/go-json"
-	"github.com/goccy/go-yaml"
-	"strings"
-	"bytes"
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
+	"github.com/goccy/go-json"
+	"github.com/goccy/go-yaml"
 	"github.com/mattn/go-isatty"
 	"os"
-    // dedicated codec packages and wrappers where appropriate
-    "github.com/JFryy/qq/codec/html"
-    "github.com/JFryy/qq/codec/gron"
-    "github.com/JFryy/qq/codec/hcl"
-    qqjson "github.com/JFryy/qq/codec/json"
-    "github.com/JFryy/qq/codec/line"
-    "github.com/JFryy/qq/codec/csv"
-    "github.com/JFryy/qq/codec/xml"
-    "github.com/JFryy/qq/codec/ini"
+	"strings"
+	// dedicated codec packages and wrappers where appropriate
+	"github.com/JFryy/qq/codec/csv"
+	"github.com/JFryy/qq/codec/gron"
+	"github.com/JFryy/qq/codec/hcl"
+	"github.com/JFryy/qq/codec/html"
+	"github.com/JFryy/qq/codec/ini"
+	qqjson "github.com/JFryy/qq/codec/json"
+	"github.com/JFryy/qq/codec/line"
+	"github.com/JFryy/qq/codec/xml"
 )
 
 // EncodingType represents the supported encoding types as an enum with a string representation
@@ -65,14 +65,14 @@ func GetEncodingType(fileType string) (EncodingType, error) {
 }
 
 var (
-    htm = html.Codec{}
-    jsn = qqjson.Codec{} // wrapper for go-json marshal
-    grn = gron.Codec{}
-    hcltf = hcl.Codec{}
-    xmll = xml.Codec{}
-    inii = ini.Codec{}
-    lines = line.Codec{}
-    sv = csv.Codec{}
+	htm   = html.Codec{}
+	jsn   = qqjson.Codec{} // wrapper for go-json marshal
+	grn   = gron.Codec{}
+	hcltf = hcl.Codec{}
+	xmll  = xml.Codec{}
+	inii  = ini.Codec{}
+	lines = line.Codec{}
+	sv    = csv.Codec{}
 )
 var SupportedFileTypes = []Encoding{
 	{JSON, json.Unmarshal, jsn.Marshal},
@@ -117,7 +117,6 @@ func Marshal(v interface{}, outputFileType EncodingType) ([]byte, error) {
 	return nil, fmt.Errorf("unsupported output file type: %v", outputFileType)
 }
 
-
 func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 	if raw {
 		var v interface{}
@@ -140,7 +139,7 @@ func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 	}
 
 	var lexer chroma.Lexer
-    // this a workaround for json lexer while we don't have a marshal function dedicated for these formats.
+	// this a workaround for json lexer while we don't have a marshal function dedicated for these formats.
 	if fileType == CSV || fileType == HTML || fileType == LINE || fileType == TXT {
 		lexer = lexers.Get("json")
 	} else {

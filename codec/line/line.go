@@ -2,10 +2,10 @@ package line
 
 import (
 	"fmt"
+	"github.com/JFryy/qq/codec/util"
 	"github.com/goccy/go-json"
 	"reflect"
 	"strings"
-    "github.com/JFryy/qq/codec/util"
 )
 
 type Codec struct{}
