@@ -21,5 +21,8 @@ install: test
 perf: build
 	time "./tests/test.sh"
 
+docker-push:
+	docker buildx build --platform linux/amd64,linux/arm64 . -t jfryy/qq:latest --push
+
 .PHONY: all test clean publish
 
