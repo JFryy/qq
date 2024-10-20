@@ -49,7 +49,14 @@ func TestMarshal(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		_, err := Marshal(data, tt.encodingType)
+		// wrap in an interface for things like CSV that require the basic test data be a []map[string]interface{}
+		var currentData interface{}
+		currentData = data
+		if tt.encodingType == CSV {
+			currentData = []interface{}{data}
+		}
+
+		_, err := Marshal(currentData, tt.encodingType)
 		if err != nil {
 			t.Errorf("marshal failed for %v: %v", tt.encodingType, err)
 		}

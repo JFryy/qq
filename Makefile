@@ -10,6 +10,7 @@ build:
 
 test: build
 	./tests/test.sh
+	go test ./codec
 
 clean:
 	rm bin/$(BINARY)
