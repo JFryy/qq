@@ -105,9 +105,9 @@ Note: these unsupported formats are on a roadmap for inclusion.
 | HCL         | ✅ Supported   | ✅ Supported   |
 | TF          | ✅ Supported   | ✅ Supported   |
 | GRON        | ✅ Supported   | ✅ Supported   |
-| CSV         | ✅ Supported   | ❌ Not Supported |
+| CSV         | ✅ Supported   | ✅ Supported |
 | Protobuf    | ❌ Not Supported | ❌ Not Supported |
-| HTML        | ✅ Supported   | ❌ Not Supported |
+| HTML        | ✅ Supported   | ✅ Supported |
 | TXT (newline)| ✅ Supported   | ❌ Not Supported |
 
 

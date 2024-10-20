@@ -81,11 +81,11 @@ var SupportedFileTypes = []Encoding{
 	{TOML, toml.Unmarshal, toml.Marshal},
 	{HCL, hcltf.Unmarshal, hcltf.Marshal},
 	{TF, hcltf.Unmarshal, hcltf.Marshal},
-	{CSV, sv.Unmarshal, jsn.Marshal},
+	{CSV, sv.Unmarshal, sv.Marshal},
 	{XML, xmll.Unmarshal, xmll.Marshal},
 	{INI, inii.Unmarshal, inii.Marshal},
 	{GRON, grn.Unmarshal, grn.Marshal},
-	{HTML, htm.Unmarshal, jsn.Marshal},
+	{HTML, htm.Unmarshal, xmll.Marshal},
 	{LINE, lines.Unmarshal, jsn.Marshal},
 	{TXT, lines.Unmarshal, jsn.Marshal},
 }
