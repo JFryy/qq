@@ -1,0 +1,43 @@
+syntax = "proto3";
+package company;
+
+enum Status {
+  ACTIVE = 0;
+  INACTIVE = 1;
+  RETIRED = 2;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+}
+
+message Employee {
+  string first_name = 1;
+  string last_name = 2;
+  int32 employee_id = 3;
+  Status status = 4;
+  string email = 5;
+  optional string phone_number = 6;  
+  reserved 7, 8;  
+  string department_name = 9;
+  bool is_manager = 10;
+}
+
+message Department {
+  string name = 1;
+  repeated Employee employees = 2;  
+}
+
+message Project {
+  string name = 1;
+  string description = 2;
+  repeated Employee team_members = 3;
+}
+
+message Company {
+  string name = 1;
+  repeated Department departments = 2;
+  reserved 3 to 5;
+}
+
