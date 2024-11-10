@@ -94,7 +94,6 @@ qq large-file.json -o yaml > /dev/null 2>&1  2.72s user 0.16s system 190% cpu 1.
 ```
 
 ## Supported Formats
-Note: these unsupported formats are on a roadmap for inclusion.
 | Format      | Input          | Output         |
 |-------------|----------------|----------------|
 | JSON        | ✅ Supported   | ✅ Supported   |
@@ -106,19 +105,18 @@ Note: these unsupported formats are on a roadmap for inclusion.
 | TF          | ✅ Supported   | ✅ Supported   |
 | GRON        | ✅ Supported   | ✅ Supported   |
 | CSV         | ✅ Supported   | ✅ Supported |
-| Protobuf    | ❌ Not Supported | ❌ Not Supported |
+| Proto (.proto)    | ✅ Supported | ❌ Not Supported |
 | HTML        | ✅ Supported   | ✅ Supported |
 | TXT (newline)| ✅ Supported   | ❌ Not Supported |
 
 
 ## Caveats
-1. `qq` is not a full `jq`/`*q` replacement and comes with idiosyncrasies from the underlying `gojq` library.
-2. the encoders and decoders are not perfect and may not be able to handle all edge cases.
-3. `qq` is under active development and more codecs are intended to be supported along with improvements to `interactive mode`.
+1. `qq` is not a full `jq` replacement, some flags may or may not be supported. 
+3. `qq` is under active development, more codecs in the future may be supported along with improvements to `interactive mode`.
 
 
 ## Contributions
-All contributions are welcome to `qq`, especially for upkeep/optimization/addition of new encodings. For ideas on contributions [please refer to the todo docs](https://github.com/JFryy/qq/blob/main/docs/TODO.md) or make an issue/PR for a suggestion if there's something that's wanted or fixes.
+All contributions are welcome to `qq`, especially for upkeep/optimization/addition of new encodings.
 
 ## Thanks and Acknowledgements / Related Projects
 This tool would not be possible without the following projects, this project is arguably more of a composition of these projects than a truly original work, with glue code, some dedicated encoders/decoders, and the interactive mode being original work.

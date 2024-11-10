@@ -19,6 +19,7 @@ require (
 	github.com/tmccombs/hcl2json v0.6.4
 	github.com/zclconf/go-cty v1.15.0
 	golang.org/x/net v0.30.0
+	google.golang.org/protobuf v1.35.1
 	gopkg.in/ini.v1 v1.67.0
 )
 
@@ -45,6 +46,7 @@ require (
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect

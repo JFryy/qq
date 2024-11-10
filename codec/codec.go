@@ -21,6 +21,7 @@ import (
 	"github.com/JFryy/qq/codec/ini"
 	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/JFryy/qq/codec/line"
+	proto "github.com/JFryy/qq/codec/proto"
 	"github.com/JFryy/qq/codec/xml"
 )
 
@@ -41,11 +42,11 @@ const (
 	HTML
 	LINE
 	TXT
-	MD
+	PROTO
 )
 
 func (e EncodingType) String() string {
-	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt", "md"}[e]
+	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt", "proto"}[e]
 }
 
 type Encoding struct {
@@ -73,6 +74,7 @@ var (
 	inii  = ini.Codec{}
 	lines = line.Codec{}
 	sv    = csv.Codec{}
+	pb = proto.Codec{}
 )
 var SupportedFileTypes = []Encoding{
 	{JSON, json.Unmarshal, jsn.Marshal},
@@ -88,6 +90,7 @@ var SupportedFileTypes = []Encoding{
 	{HTML, htm.Unmarshal, xmll.Marshal},
 	{LINE, lines.Unmarshal, jsn.Marshal},
 	{TXT, lines.Unmarshal, jsn.Marshal},
+	{PROTO, pb.Unmarshal, jsn.Marshal},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data interface{}) error {
