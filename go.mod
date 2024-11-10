@@ -19,7 +19,6 @@ require (
 	github.com/tmccombs/hcl2json v0.6.4
 	github.com/zclconf/go-cty v1.15.0
 	golang.org/x/net v0.30.0
-	google.golang.org/protobuf v1.35.1
 	gopkg.in/ini.v1 v1.67.0
 )
 
