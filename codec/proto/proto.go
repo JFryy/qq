@@ -68,9 +68,9 @@ func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 			fieldType := fieldMatch[1]
 			fieldName := fieldMatch[2]
 			fieldNumber, err := strconv.Atoi(fieldMatch[3])
-            if err != nil {
-                return err
-            }
+			if err != nil {
+				return err
+			}
 			fields[fieldName] = Field{
 				Name:   fieldName,
 				Type:   fieldType,
@@ -129,7 +129,7 @@ func ConvertProtoToJSON(protoFile *ProtoFile) (map[string]interface{}, error) {
 	jsonMap := make(map[string]interface{})
 	packageMap := make(map[string]interface{})
 	packageMap["message"] = make(map[string]interface{})
-	packageMap["enums"] = make(map[string]interface{})
+	packageMap["enum"] = make(map[string]interface{})
 
 	for messageName, message := range protoFile.Messages {
 		fieldsList := []interface{}{}
@@ -148,7 +148,7 @@ func ConvertProtoToJSON(protoFile *ProtoFile) (map[string]interface{}, error) {
 		for enumValueName, enumValueNumber := range enum.Values {
 			valuesMap[enumValueName] = enumValueNumber
 		}
-		packageMap["enums"].(map[string]interface{})[enumName] = valuesMap
+		packageMap["enum"].(map[string]interface{})[enumName] = valuesMap
 	}
 
 	jsonMap[protoFile.PackageName] = packageMap
