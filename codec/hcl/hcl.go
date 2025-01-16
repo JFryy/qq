@@ -52,6 +52,24 @@ func (c *Codec) populateBody(body *hclwrite.Body, data map[string]interface{}) {
 		case map[string]interface{}:
 			block := body.AppendNewBlock(key, nil)
 			c.populateBody(block.Body(), v)
+
+		case []interface{}:
+			if len(v) == 1 {
+				if singleMap, ok := v[0].(map[string]interface{}); ok {
+					block := body.AppendNewBlock(key, nil)
+					c.populateBody(block.Body(), singleMap)
+					continue
+				}
+			}
+			if len(v) == 0 {
+				continue
+			}
+			tuple := make([]cty.Value, len(v))
+			for i, elem := range v {
+				tuple[i] = c.convertToCtyValue(elem)
+			}
+			body.SetAttributeValue(key, cty.TupleVal(tuple))
+
 		case string:
 			body.SetAttributeValue(key, cty.StringVal(v))
 		case int:
@@ -62,12 +80,6 @@ func (c *Codec) populateBody(body *hclwrite.Body, data map[string]interface{}) {
 			body.SetAttributeValue(key, cty.NumberFloatVal(v))
 		case bool:
 			body.SetAttributeValue(key, cty.BoolVal(v))
-		case []interface{}:
-			tuple := make([]cty.Value, len(v))
-			for i, elem := range v {
-				tuple[i] = c.convertToCtyValue(elem)
-			}
-			body.SetAttributeValue(key, cty.TupleVal(tuple))
 		default:
 			log.Printf("Unsupported type: %T", v)
 		}
