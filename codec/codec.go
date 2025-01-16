@@ -74,7 +74,7 @@ var (
 	inii  = ini.Codec{}
 	lines = line.Codec{}
 	sv    = csv.Codec{}
-	pb = proto.Codec{}
+	pb    = proto.Codec{}
 )
 var SupportedFileTypes = []Encoding{
 	{JSON, json.Unmarshal, jsn.Marshal},

@@ -10,15 +10,15 @@ require (
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/goccy/go-json v0.10.4
-	github.com/goccy/go-yaml v1.15.13
+	github.com/goccy/go-yaml v1.15.14
 	github.com/hashicorp/hcl/v2 v2.23.0
 	github.com/itchyny/gojq v0.12.17
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/cobra v1.8.1
 	github.com/tmccombs/hcl2json v0.6.5
-	github.com/zclconf/go-cty v1.15.1
-	golang.org/x/net v0.33.0
+	github.com/zclconf/go-cty v1.16.1
+	golang.org/x/net v0.34.0
 	gopkg.in/ini.v1 v1.67.0
 )
 
@@ -27,7 +27,7 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/charmbracelet/x/ansi v0.6.0 // indirect
+	github.com/charmbracelet/x/ansi v0.7.0 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
@@ -46,7 +46,7 @@ require (
 	github.com/stretchr/testify v1.9.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/tools v0.28.0 // indirect
+	golang.org/x/tools v0.29.0 // indirect
 )
