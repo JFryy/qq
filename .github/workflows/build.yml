@@ -7,28 +7,44 @@ permissions:
     packages: write
 
 jobs:
-  release-linux-amd64:
-    name: release linux/amd64
+  release-linux:
+    name: release linux
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
     steps:
     - uses: actions/checkout@v4
     - uses: wangyoucao577/go-release-action@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: linux
-        goarch: amd64
-    - uses: wangyoucao577/go-release-action@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: linux
-        goarch: arm64
+        goarch: ${{ matrix.goarch }}
+
+  release-darwin:
+    name: release darwin
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+    steps:
+    - uses: actions/checkout@v4
     - uses: wangyoucao577/go-release-action@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: darwin
-        goarch: amd64
+        goarch: ${{ matrix.goarch }}
+
+  release-windows:
+    name: release windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+    steps:
+    - uses: actions/checkout@v4
     - uses: wangyoucao577/go-release-action@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: darwin
-        goarch: arm64
+        goos: windows
+        goarch: ${{ matrix.goarch }}
