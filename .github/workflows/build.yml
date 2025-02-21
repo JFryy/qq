@@ -43,8 +43,16 @@ jobs:
         goarch: [amd64, arm64]
     steps:
     - uses: actions/checkout@v4
-    - uses: wangyoucao577/go-release-action@v1
+    - name: Setup Go
+      uses: actions/setup-go@v4
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: windows
-        goarch: ${{ matrix.goarch }}
+        go-version: stable
+    - name: Build Windows binaries
+      run: |
+        mkdir dist
+        go build -o dist/qq-${{ matrix.goarch }}.exe .
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/qq-${{ matrix.goarch }}.exe
+
