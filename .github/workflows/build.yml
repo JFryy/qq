@@ -3,56 +3,49 @@ on:
     types: [created]
 
 permissions:
-    contents: write
-    packages: write
+  contents: write
+  packages: write
 
 jobs:
   release-linux:
-    name: release linux
+    name: Release Linux
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goarch: [amd64, arm64]
     steps:
-    - uses: actions/checkout@v4
-    - uses: wangyoucao577/go-release-action@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: linux
-        goarch: ${{ matrix.goarch }}
+      - uses: actions/checkout@v4
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: linux
+          goarch: ${{ matrix.goarch }}
 
   release-darwin:
-    name: release darwin
+    name: Release macOS
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goarch: [amd64, arm64]
     steps:
-    - uses: actions/checkout@v4
-    - uses: wangyoucao577/go-release-action@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: darwin
-        goarch: ${{ matrix.goarch }}
+      - uses: actions/checkout@v4
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: darwin
+          goarch: ${{ matrix.goarch }}
 
   release-windows:
-    name: release windows
-    runs-on: windows-latest
+    name: Release Windows
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         goarch: [amd64, arm64]
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: stable
-    - name: Build Windows binaries
-      run: |
-        mkdir dist
-        go build -o dist/qq-${{ matrix.goarch }}.exe .
-    - name: Upload Release Assets
-      uses: softprops/action-gh-release@v2
-      with:
-        files: dist/qq-${{ matrix.goarch }}.exe
-
+      - uses: actions/checkout@v4
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: windows
+          goarch: ${{ matrix.goarch }}
+          archive_format: zip
