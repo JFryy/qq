@@ -16,7 +16,7 @@ This implementation may have some limitations and may not cover all edge cases.
 
 type Codec struct{}
 
-func (c *Codec) Unmarshal(data []byte, v interface{}) error {
+func (c *Codec) Unmarshal(data []byte, v any) error {
 	htmlMap, err := c.HTMLToMap(data)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func decodeUnicodeEscapes(s string) (string, error) {
 	}), nil
 }
 
-func (c *Codec) HTMLToMap(htmlBytes []byte) (map[string]interface{}, error) {
+func (c *Codec) HTMLToMap(htmlBytes []byte) (map[string]any, error) {
 	doc, err := html.Parse(bytes.NewReader(htmlBytes))
 	if err != nil {
 		return nil, err
@@ -60,14 +60,14 @@ func (c *Codec) HTMLToMap(htmlBytes []byte) (map[string]interface{}, error) {
 	}
 
 	result := c.nodeToMap(root)
-	if m, ok := result.(map[string]interface{}); ok {
-		return map[string]interface{}{"html": m}, nil
+	if m, ok := result.(map[string]any); ok {
+		return map[string]any{"html": m}, nil
 	}
 	return nil, nil
 }
 
-func (c *Codec) nodeToMap(node *html.Node) interface{} {
-	m := make(map[string]interface{})
+func (c *Codec) nodeToMap(node *html.Node) any {
+	m := make(map[string]any)
 
 	// Process attributes if present for node
 	if node.Attr != nil {
@@ -81,7 +81,7 @@ func (c *Codec) nodeToMap(node *html.Node) interface{} {
 	// Recursively process all the children
 	var childTexts []string
 	var comments []string
-	children := make(map[string][]interface{})
+	children := make(map[string][]any)
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
 		switch child.Type {
 		case html.TextNode:
@@ -133,7 +133,7 @@ func (c *Codec) nodeToMap(node *html.Node) interface{} {
 	if len(comments) > 0 {
 		if len(comments) == 1 {
 			if len(m) == 0 {
-				return map[string]interface{}{"#comment": comments[0]}
+				return map[string]any{"#comment": comments[0]}
 			} else {
 				m["#comment"] = comments[0]
 			}
@@ -150,10 +150,10 @@ func (c *Codec) nodeToMap(node *html.Node) interface{} {
 		}
 		if len(node.Attr) == 0 {
 			for key, val := range m {
-				if childMap, ok := val.(map[string]interface{}); ok && len(childMap) == 1 {
+				if childMap, ok := val.(map[string]any); ok && len(childMap) == 1 {
 					return val
 				}
-				return map[string]interface{}{key: val}
+				return map[string]any{key: val}
 			}
 		}
 	}

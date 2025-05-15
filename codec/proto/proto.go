@@ -33,7 +33,7 @@ type Enum struct {
 
 type Codec struct{}
 
-func (c *Codec) Unmarshal(input []byte, v interface{}) error {
+func (c *Codec) Unmarshal(input []byte, v any) error {
 	protoContent := string(input)
 
 	protoContent = removeComments(protoContent)
@@ -125,30 +125,30 @@ func removeComments(input string) string {
 	return strings.TrimSpace(input)
 }
 
-func ConvertProtoToJSON(protoFile *ProtoFile) (map[string]interface{}, error) {
-	jsonMap := make(map[string]interface{})
-	packageMap := make(map[string]interface{})
-	packageMap["message"] = make(map[string]interface{})
-	packageMap["enum"] = make(map[string]interface{})
+func ConvertProtoToJSON(protoFile *ProtoFile) (map[string]any, error) {
+	jsonMap := make(map[string]any)
+	packageMap := make(map[string]any)
+	packageMap["message"] = make(map[string]any)
+	packageMap["enum"] = make(map[string]any)
 
 	for messageName, message := range protoFile.Messages {
-		fieldsList := []interface{}{}
+		fieldsList := []any{}
 		for name, field := range message.Fields {
-			values := make(map[string]interface{})
+			values := make(map[string]any)
 			values["name"] = name
 			values["type"] = field.Type
 			values["number"] = field.Number
 			fieldsList = append(fieldsList, values)
 		}
-		packageMap["message"].(map[string]interface{})[messageName] = fieldsList
+		packageMap["message"].(map[string]any)[messageName] = fieldsList
 	}
 
 	for enumName, enum := range protoFile.Enums {
-		valuesMap := make(map[string]interface{})
+		valuesMap := make(map[string]any)
 		for enumValueName, enumValueNumber := range enum.Values {
 			valuesMap[enumValueName] = enumValueNumber
 		}
-		packageMap["enum"].(map[string]interface{})[enumName] = valuesMap
+		packageMap["enum"].(map[string]any)[enumName] = valuesMap
 	}
 
 	jsonMap[protoFile.PackageName] = packageMap

@@ -9,21 +9,21 @@ import (
 
 type Codec struct{}
 
-func (c *Codec) Marshal(v interface{}) ([]byte, error) {
+func (c *Codec) Marshal(v any) ([]byte, error) {
 	switch v := v.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		mv := mxj.Map(v)
 		return mv.XmlIndent("", "  ")
-	case []interface{}:
-		mv := mxj.Map(map[string]interface{}{"root": v})
+	case []any:
+		mv := mxj.Map(map[string]any{"root": v})
 		return mv.XmlIndent("", "  ")
 	default:
-		mv := mxj.Map(map[string]interface{}{"value": v})
+			mv := mxj.Map(map[string]any{"value": v})
 		return mv.XmlIndent("", "  ")
 	}
 }
 
-func (c *Codec) Unmarshal(input []byte, v interface{}) error {
+func (c *Codec) Unmarshal(input []byte, v any) error {
 	mv, err := mxj.NewMapXml(input)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling XML: %v", err)
@@ -42,14 +42,14 @@ func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 }
 
 // infer the type of the value and parse it accordingly
-func (c *Codec) parseXMLValues(v interface{}) interface{} {
+func (c *Codec) parseXMLValues(v any) any {
 	switch v := v.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for key, val := range v {
 			v[key] = c.parseXMLValues(val)
 		}
 		return v
-	case []interface{}:
+	case []any:
 		for i, val := range v {
 			v[i] = c.parseXMLValues(val)
 		}

@@ -12,11 +12,11 @@ import (
 
 type Codec struct{}
 
-func (c *Codec) Unmarshal(data []byte, v interface{}) error {
+func (c *Codec) Unmarshal(data []byte, v any) error {
 	lines := strings.Split(string(data), "\n")
 	var isArray bool
-	dataMap := make(map[string]interface{})
-	arrayData := make([]interface{}, 0)
+	dataMap := make(map[string]any)
+	arrayData := make([]any, 0)
 
 	for _, line := range lines {
 		if len(line) == 0 {
@@ -40,7 +40,7 @@ func (c *Codec) Unmarshal(data []byte, v interface{}) error {
 
 	if isArray && len(dataMap) == 1 {
 		for _, val := range dataMap {
-			if arrayVal, ok := val.([]interface{}); ok {
+			if arrayVal, ok := val.([]any); ok {
 				arrayData = arrayVal
 			}
 		}
@@ -59,13 +59,13 @@ func (c *Codec) Unmarshal(data []byte, v interface{}) error {
 	return nil
 }
 
-func (c *Codec) Marshal(v interface{}) ([]byte, error) {
+func (c *Codec) Marshal(v any) ([]byte, error) {
 	var buf bytes.Buffer
 	c.traverseJSON("", v, &buf)
 	return buf.Bytes(), nil
 }
 
-func (c *Codec) traverseJSON(prefix string, v interface{}, buf *bytes.Buffer) {
+func (c *Codec) traverseJSON(prefix string, v any, buf *bytes.Buffer) {
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 	case reflect.Map:
@@ -92,7 +92,7 @@ func addPrefix(prefix, name string) string {
 	return prefix + "." + name
 }
 
-func formatJSONValue(v interface{}) string {
+func formatJSONValue(v any) string {
 	switch val := v.(type) {
 	case string:
 		return fmt.Sprintf("%q", val)
@@ -109,7 +109,7 @@ func formatJSONValue(v interface{}) string {
 	}
 }
 
-func (c *Codec) setValueJSON(data map[string]interface{}, key string, value interface{}) {
+func (c *Codec) setValueJSON(data map[string]any, key string, value any) {
 	parts := strings.Split(key, ".")
 	var m = data
 	for i, part := range parts {
@@ -118,9 +118,9 @@ func (c *Codec) setValueJSON(data map[string]interface{}, key string, value inte
 				k := strings.Split(part, "[")[0]
 				index := parseArrayIndex(part)
 				if _, ok := m[k]; !ok {
-					m[k] = make([]interface{}, index+1)
+					m[k] = make([]any, index+1)
 				}
-				arr := m[k].([]interface{})
+				arr := m[k].([]any)
 				if len(arr) <= index {
 					for len(arr) <= index {
 						arr = append(arr, nil)
@@ -137,9 +137,9 @@ func (c *Codec) setValueJSON(data map[string]interface{}, key string, value inte
 				k := strings.Split(part, "[")[0]
 				index := parseArrayIndex(part)
 				if _, ok := m[k]; !ok {
-					m[k] = make([]interface{}, index+1)
+					m[k] = make([]any, index+1)
 				}
-				arr := m[k].([]interface{})
+				arr := m[k].([]any)
 				if len(arr) <= index {
 					for len(arr) <= index {
 						arr = append(arr, nil)
@@ -147,14 +147,14 @@ func (c *Codec) setValueJSON(data map[string]interface{}, key string, value inte
 					m[k] = arr
 				}
 				if arr[index] == nil {
-					arr[index] = make(map[string]interface{})
+					arr[index] = make(map[string]any)
 				}
-				m = arr[index].(map[string]interface{})
+				m = arr[index].(map[string]any)
 			} else {
 				if _, ok := m[part]; !ok {
-					m[part] = make(map[string]interface{})
+					m[part] = make(map[string]any)
 				}
-				m = m[part].(map[string]interface{})
+				m = m[part].(map[string]any)
 			}
 		}
 	}
