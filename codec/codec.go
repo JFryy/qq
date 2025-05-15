@@ -93,7 +93,7 @@ var SupportedFileTypes = []Encoding{
 	{PROTO, pb.Unmarshal, jsn.Marshal},
 }
 
-func Unmarshal(input []byte, inputFileType EncodingType, data interface{}) error {
+func Unmarshal(input []byte, inputFileType EncodingType, data any) error {
 	for _, t := range SupportedFileTypes {
 		if t.Ext == inputFileType {
 			err := t.Unmarshal(input, data)
@@ -106,7 +106,7 @@ func Unmarshal(input []byte, inputFileType EncodingType, data interface{}) error
 	return fmt.Errorf("unsupported input file type: %v", inputFileType)
 }
 
-func Marshal(v interface{}, outputFileType EncodingType) ([]byte, error) {
+func Marshal(v any, outputFileType EncodingType) ([]byte, error) {
 	for _, t := range SupportedFileTypes {
 		if t.Ext == outputFileType {
 			var err error
@@ -122,15 +122,15 @@ func Marshal(v interface{}, outputFileType EncodingType) ([]byte, error) {
 
 func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 	if raw {
-		var v interface{}
+		var v any
 		err := Unmarshal([]byte(s), fileType, &v)
 		if err != nil {
 			return "", err
 		}
 		switch v.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			break
-		case []interface{}:
+		case []any:
 			break
 		default:
 			return strings.ReplaceAll(s, "\"", ""), nil

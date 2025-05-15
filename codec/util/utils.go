@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func ParseValue(value string) interface{} {
+func ParseValue(value string) any {
 	value = strings.TrimSpace(value)
 
 	if intValue, err := strconv.Atoi(value); err == nil {

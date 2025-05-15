@@ -10,9 +10,9 @@ import (
 
 type Codec struct{}
 
-func (c *Codec) Unmarshal(input []byte, v interface{}) error {
+func (c *Codec) Unmarshal(input []byte, v any) error {
 	lines := strings.Split(strings.TrimSpace(string(input)), "\n")
-	var parsedLines []interface{}
+	var parsedLines []any
 
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)

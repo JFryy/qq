@@ -118,7 +118,7 @@ func handleCommand(args []string, inputtype string, outputtype string, rawInput 
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	var data interface{}
+	var data any
 	err = codec.Unmarshal(input, inputCodec, &data)
 	if err != nil {
 		fmt.Println(err)
@@ -179,7 +179,7 @@ func inferFileType(fName string) codec.EncodingType {
 	return codec.JSON
 }
 
-func executeQuery(query *gojq.Query, data interface{}, fileType codec.EncodingType, rawOut bool) {
+func executeQuery(query *gojq.Query, data any, fileType codec.EncodingType, rawOut bool) {
 	iter := query.Run(data)
 	for {
 		v, ok := iter.Next()

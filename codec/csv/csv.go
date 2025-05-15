@@ -40,7 +40,7 @@ func (c *Codec) detectDelimiter(input []byte) rune {
 	return maxDelimiter
 }
 
-func (c *Codec) Marshal(v interface{}) ([]byte, error) {
+func (c *Codec) Marshal(v any) ([]byte, error) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
 
@@ -54,9 +54,9 @@ func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	}
 
 	firstElem := rv.Index(0).Interface()
-	firstElemValue, ok := firstElem.(map[string]interface{})
+	firstElemValue, ok := firstElem.(map[string]any)
 	if !ok {
-		return nil, errors.New("slice elements must be of type map[string]interface{}")
+		return nil, errors.New("slice elements must be of type map[string]any")
 	}
 
 	var headers []string
@@ -70,7 +70,7 @@ func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	}
 
 	for i := 0; i < rv.Len(); i++ {
-		recordMap := rv.Index(i).Interface().(map[string]interface{})
+		recordMap := rv.Index(i).Interface().(map[string]any)
 		row := make([]string, len(headers))
 		for j, header := range headers {
 			if value, ok := recordMap[header]; ok {
@@ -93,7 +93,7 @@ func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *Codec) Unmarshal(input []byte, v interface{}) error {
+func (c *Codec) Unmarshal(input []byte, v any) error {
 	delimiter := c.detectDelimiter(input)
 	r := csv.NewReader(strings.NewReader(string(input)))
 	r.Comma = delimiter
@@ -103,7 +103,7 @@ func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 		return fmt.Errorf("error reading CSV headers: %v", err)
 	}
 
-	var records []map[string]interface{}
+	var records []map[string]any
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -113,7 +113,7 @@ func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 			return fmt.Errorf("error reading CSV record: %v", err)
 		}
 
-		rowMap := make(map[string]interface{})
+		rowMap := make(map[string]any)
 		for i, header := range headers {
 			rowMap[header] = util.ParseValue(record[i])
 		}

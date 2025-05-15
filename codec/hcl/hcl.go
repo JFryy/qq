@@ -11,7 +11,7 @@ import (
 
 type Codec struct{}
 
-func (c *Codec) Unmarshal(input []byte, v interface{}) error {
+func (c *Codec) Unmarshal(input []byte, v any) error {
 	opts := convert.Options{}
 	content, err := convert.Bytes(input, "json", opts)
 	if err != nil {
@@ -20,14 +20,14 @@ func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 	return json.Unmarshal(content, v)
 }
 
-func (c *Codec) Marshal(v interface{}) ([]byte, error) {
+func (c *Codec) Marshal(v any) ([]byte, error) {
 	// Ensure the input is wrapped in a map if it's not already
-	var data map[string]interface{}
+	var data map[string]any
 	switch v := v.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		data = v
 	default:
-		data = map[string]interface{}{
+		data = map[string]any{
 			"data": v,
 		}
 	}
@@ -39,23 +39,23 @@ func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	return hclData, nil
 }
 
-func (c *Codec) convertMapToHCL(data map[string]interface{}) ([]byte, error) {
+func (c *Codec) convertMapToHCL(data map[string]any) ([]byte, error) {
 	f := hclwrite.NewEmptyFile()
 	rootBody := f.Body()
 	c.populateBody(rootBody, data)
 	return f.Bytes(), nil
 }
 
-func (c *Codec) populateBody(body *hclwrite.Body, data map[string]interface{}) {
+func (c *Codec) populateBody(body *hclwrite.Body, data map[string]any) {
 	for key, value := range data {
 		switch v := value.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			block := body.AppendNewBlock(key, nil)
 			c.populateBody(block.Body(), v)
 
-		case []interface{}:
+		case []any:
 			if len(v) == 1 {
-				if singleMap, ok := v[0].(map[string]interface{}); ok {
+				if singleMap, ok := v[0].(map[string]any); ok {
 					block := body.AppendNewBlock(key, nil)
 					c.populateBody(block.Body(), singleMap)
 					continue
@@ -86,7 +86,7 @@ func (c *Codec) populateBody(body *hclwrite.Body, data map[string]interface{}) {
 	}
 }
 
-func (c *Codec) convertToCtyValue(value interface{}) cty.Value {
+func (c *Codec) convertToCtyValue(value any) cty.Value {
 	switch v := value.(type) {
 	case string:
 		return cty.StringVal(v)
@@ -98,13 +98,13 @@ func (c *Codec) convertToCtyValue(value interface{}) cty.Value {
 		return cty.NumberFloatVal(v)
 	case bool:
 		return cty.BoolVal(v)
-	case []interface{}:
+	case []any:
 		tuple := make([]cty.Value, len(v))
 		for i, elem := range v {
 			tuple[i] = c.convertToCtyValue(elem)
 		}
 		return cty.TupleVal(tuple)
-	case map[string]interface{}:
+	case map[string]any:
 		vals := make(map[string]cty.Value)
 		for k, elem := range v {
 			vals[k] = c.convertToCtyValue(elem)

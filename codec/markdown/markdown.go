@@ -20,13 +20,13 @@ type Hyperlink struct {
 type Table []map[string]string
 
 type Codec struct {
-	Section     map[string]interface{}
-	Subsection  map[string]interface{}
+	Section     map[string]any
+	Subsection  map[string]any
 	InCodeBlock bool
 	InTable     bool
 }
 
-func (m *Codec) Unmarshal(data []byte, v interface{}) error {
+func (m *Codec) Unmarshal(data []byte, v any) error {
 	if v == nil {
 		return errors.New("v cannot be nil")
 	}
@@ -53,9 +53,9 @@ func (m *Codec) parseHyperlink(line string) *Hyperlink {
 	return nil
 }
 
-func (m *Codec) parseReadme(content string) interface{} {
+func (m *Codec) parseReadme(content string) any {
 	lines := strings.Split(content, "\n")
-	sections := make(map[string]interface{})
+	sections := make(map[string]any)
 	var title string
 	var table Table
 	var list []string
@@ -121,7 +121,7 @@ func (m *Codec) parseReadme(content string) interface{} {
 				}
 			}
 			currentHeading = strings.TrimSpace(trimmedLine[2:])
-			newSection := make(map[string]interface{})
+			newSection := make(map[string]any)
 			m.Section = newSection
 			inList = false
 			inOrderedList = false
@@ -141,7 +141,7 @@ func (m *Codec) parseReadme(content string) interface{} {
 					heading := (m.Subsection)["heading"].(string)
 					m.addToSubsection(&m.Section, heading, m.Subsection)
 				}
-				newSubsection := make(map[string]interface{})
+				newSubsection := make(map[string]any)
 				m.Subsection = newSubsection
 				(m.Subsection)["heading"] = strings.TrimSpace(trimmedLine[3:])
 			}
@@ -285,13 +285,13 @@ func (m *Codec) parseReadme(content string) interface{} {
 	return sections
 }
 
-func (m *Codec) addToSubsection(subsection *map[string]interface{}, key string, value interface{}) {
+func (m *Codec) addToSubsection(subsection *map[string]any, key string, value any) {
 	if subsection == nil || *subsection == nil {
 		return
 	}
-	if existing, ok := (*subsection)[key].([]interface{}); ok {
+	if existing, ok := (*subsection)[key].([]any); ok {
 		(*subsection)[key] = append(existing, value)
 	} else {
-		(*subsection)[key] = []interface{}{value}
+		(*subsection)[key] = []any{value}
 	}
 }

@@ -41,7 +41,7 @@ func TestGetEncodingType(t *testing.T) {
 }
 
 func TestMarshal(t *testing.T) {
-	data := map[string]interface{}{"key": "value"}
+	data := map[string]any{"key": "value"}
 	tests := []struct {
 		encodingType EncodingType
 	}{
@@ -49,11 +49,11 @@ func TestMarshal(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		// wrap in an interface for things like CSV that require the basic test data be a []map[string]interface{}
-		var currentData interface{}
+		// wrap in an interface for things like CSV that require the basic test data be a []map[string]any
+		var currentData any
 		currentData = data
 		if tt.encodingType == CSV {
-			currentData = []interface{}{data}
+			currentData = []any{data}
 		}
 
 		_, err := Marshal(currentData, tt.encodingType)
@@ -77,23 +77,23 @@ func TestUnmarshal(t *testing.T) {
 	tests := []struct {
 		input        []byte
 		encodingType EncodingType
-		expected     interface{}
+		expected     any
 	}{
-		{[]byte(jsonData), JSON, map[string]interface{}{"key": "value"}},
-		{[]byte(xmlData), XML, map[string]interface{}{"root": map[string]interface{}{"key": "value"}}},
-		{[]byte(yamlData), YAML, map[string]interface{}{"key": "value"}},
-		{[]byte(tomlData), TOML, map[string]interface{}{"key": "value"}},
-		{[]byte(gronData), GRON, map[string]interface{}{"key": "value"}},
-		{[]byte(tfData), TF, map[string]interface{}{"key": "value"}},
-		//		{[]byte(htmlData), HTML, map[string]interface{}{"html": map[string]interface{}{"body": map[string]interface{}{"key": "value"}}}},
-		//		{[]byte(csvData), CSV, []map[string]interface{}{
+		{[]byte(jsonData), JSON, map[string]any{"key": "value"}},
+		{[]byte(xmlData), XML, map[string]any{"root": map[string]any{"key": "value"}}},
+		{[]byte(yamlData), YAML, map[string]any{"key": "value"}},
+		{[]byte(tomlData), TOML, map[string]any{"key": "value"}},
+		{[]byte(gronData), GRON, map[string]any{"key": "value"}},
+		{[]byte(tfData), TF, map[string]any{"key": "value"}},
+		//		{[]byte(htmlData), HTML, map[string]any{"html": map[string]any{"body": map[string]any{"key": "value"}}}},
+		//		{[]byte(csvData), CSV, []map[string]any{
 		//			{"key1": "value1", "key2": "value2"},
 		//			{"key1": "value3", "key2": "value4"},
 		//		}},
 	}
 
 	for _, tt := range tests {
-		var data interface{}
+		var data any
 		err := Unmarshal(tt.input, tt.encodingType, &data)
 		if err != nil {
 			t.Errorf("unmarshal failed for %v: %v", tt.encodingType, err)

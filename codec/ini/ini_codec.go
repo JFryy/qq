@@ -10,18 +10,18 @@ import (
 
 type Codec struct{}
 
-func (c *Codec) Unmarshal(input []byte, v interface{}) error {
+func (c *Codec) Unmarshal(input []byte, v any) error {
 	cfg, err := ini.Load(input)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling INI: %v", err)
 	}
 
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	for _, section := range cfg.Sections() {
 		if section.Name() == ini.DefaultSection {
 			continue
 		}
-		sectionMap := make(map[string]interface{})
+		sectionMap := make(map[string]any)
 		for _, key := range section.Keys() {
 			sectionMap[key.Name()] = util.ParseValue(key.Value())
 		}
@@ -31,15 +31,15 @@ func (c *Codec) Unmarshal(input []byte, v interface{}) error {
 	return mapstructure.Decode(data, v)
 }
 
-func (c *Codec) Marshal(v interface{}) ([]byte, error) {
-	data, ok := v.(map[string]interface{})
+func (c *Codec) Marshal(v any) ([]byte, error) {
+	data, ok := v.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("input data is not a map")
 	}
 
 	cfg := ini.Empty()
 	for section, sectionValue := range data {
-		sectionMap, ok := sectionValue.(map[string]interface{})
+		sectionMap, ok := sectionValue.(map[string]any)
 		if !ok {
 			continue
 		}

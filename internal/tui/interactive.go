@@ -30,7 +30,7 @@ type model struct {
 	showingPreview bool
 	jqOptions      []string
 	suggestedValue string
-	jsonObj        interface{}
+	jsonObj        any
 	viewport       viewport.Model
 }
 
@@ -58,7 +58,7 @@ func newModel(data string) model {
 }
 
 func generateJqOptions(jsonStr string) []string {
-	var jsonData interface{}
+	var jsonData any
 	err := json.Unmarshal([]byte(jsonStr), &jsonData)
 	if err != nil {
 		return []string{"."}
@@ -75,15 +75,15 @@ func generateJqOptions(jsonStr string) []string {
 	return result
 }
 
-func extractPaths(data interface{}, prefix string, options map[string]struct{}) {
+func extractPaths(data any, prefix string, options map[string]struct{}) {
 	switch v := data.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for key, value := range v {
 			newPrefix := prefix + "." + key
 			options[newPrefix] = struct{}{}
 			extractPaths(value, newPrefix, options)
 		}
-	case []interface{}:
+	case []any:
 		for i, item := range v {
 			newPrefix := fmt.Sprintf("%s[%d]", prefix, i)
 			options[newPrefix] = struct{}{}
@@ -176,8 +176,8 @@ func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func jsonStrToInterface(jsonStr string) (interface{}, error) {
-	var jsonData interface{}
+func jsonStrToInterface(jsonStr string) (any, error) {
+	var jsonData any
 	err := json.Unmarshal([]byte(jsonStr), &jsonData)
 	if err != nil {
 		return nil, fmt.Errorf("Invalid JSON input: %s", err)
@@ -193,7 +193,7 @@ func (m *model) runJqFilter() {
 		return
 	}
 
-	var jsonData interface{}
+	var jsonData any
 	err = json.Unmarshal([]byte(m.jsonInput), &jsonData)
 	if err != nil {
 		m.jqOutput = fmt.Sprintf("Invalid JSON input: %s\n\nLast valid output:\n%s", err, m.lastOutput)
