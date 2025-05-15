@@ -51,8 +51,8 @@ func (e EncodingType) String() string {
 
 type Encoding struct {
 	Ext       EncodingType
-	Unmarshal func([]byte, interface{}) error
-	Marshal   func(interface{}) ([]byte, error)
+	Unmarshal func([]byte, any) error
+	Marshal   func(any) ([]byte, error)
 }
 
 func GetEncodingType(fileType string) (EncodingType, error) {
