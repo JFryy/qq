@@ -36,6 +36,11 @@ From [AUR](https://aur.archlinux.org/packages/qq-git) (ArchLinux):
 yay qq-git
 ```
 
+From [x-cmd](https://x-cmd.com/install/qq):
+```shell
+x install qq
+```
+
 From source (requires `go` `>=1.22.4`)
 ```shell
 make install
