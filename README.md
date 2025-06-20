@@ -1,12 +1,11 @@
 # qq
 
-`qq` is a interoperable configuration format transcoder with `jq` query syntax powered by `gojq`. `qq` is multi modal, and can be used as a replacement for `jq` or be interacted with via a repl with autocomplete and realtime rendering preview for building queries.
+`qq` is an interoperable configuration format transcoder with `jq` query syntax powered by `gojq`. `qq` is multi modal, and can be used as a replacement for `jq` or be interacted with via a REPL with autocomplete and realtime rendering preview for building queries.
 
 ## Usage
-Here's some example usage, this emphasizes the interactive mode for demonstrantion, but `qq` is designed for usage in shell scripts.
+
+Here's some example usage, this emphasizes the interactive mode for demonstration, but `qq` is designed for usage in shell scripts.
 ![Demo GIF](docs/demo.gif)
-
-
 
 ```sh
 # JSON is default in and output.
@@ -26,12 +25,15 @@ qq . file.json --interactive
 ```
 
 ## Installation
+
 From brew:
+
 ```shell
 brew install jfryy/tap/qq 
 ```
 
 From [AUR](https://aur.archlinux.org/packages/qq-git) (ArchLinux):
+
 ```shell
 yay qq-git
 ```
@@ -57,19 +59,21 @@ docker pull jfryy/qq
 # run an example
 echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 ```
+
 ## Background
 
 `qq` is inspired by `fq` and `jq`. `jq` is a powerful and succinct query tool, sometimes I would find myself needing to use another bespoke tool for another format than json, whether its something dedicated with json query built in or a simple converter from one configuration format to json to pipe into jq. `qq` aims to be a handly utility on the terminal or in shell scripts that can be used for most interaction with structured formats in the terminal. It can transcode configuration formats interchangeably between one-another with the power of `jq` and it has an `an interactive repl (with automcomplete)` to boot so you can have an interactive experience when building queries optionally. Many thanks to the authors of the libraries used in this project, especially `jq`, `gojq`, `gron` and `fq` for direct usage and/or inspiration for the project.
 
-
 ## Features
-* support a wide range of configuration formats and transform them interchangeably between eachother.
-* quick and comprehensive querying of configuration formats without needing a pipeline of dedicated tools.
-* provide an interactive mode for building queries with autocomplete and realtime rendering preview.
+
+* Support a wide range of configuration formats and transform them interchangeably between each other.
+* Quick and comprehensive querying of configuration formats without needing a pipeline of dedicated tools.
+* Provide an interactive mode for building queries with autocomplete and realtime rendering preview.
 * `qq` is broad, but performant encodings are still a priority, execution is quite fast despite covering a broad range of codecs. `qq` performs comparitively with dedicated tools for a given format.
 
 ### Rough Benchmarks
-note: these improvements generally only occur on large files and are miniscule otherwise. qq may be slower than dedicated tools for a given format, but it is pretty fast for a broad range of formats.
+
+Note: these improvements generally only occur on large files and are miniscule otherwise. qq may be slower than dedicated tools for a given format, but it is pretty fast for a broad range of formats.
 
 ```shell
 $ du -h large-file.json
@@ -99,6 +103,7 @@ qq large-file.json -o yaml > /dev/null 2>&1  2.72s user 0.16s system 190% cpu 1.
 ```
 
 ## Supported Formats
+
 | Format      | Input          | Output         |
 |-------------|----------------|----------------|
 | JSON        | ✅ Supported   | ✅ Supported   |
@@ -114,16 +119,17 @@ qq large-file.json -o yaml > /dev/null 2>&1  2.72s user 0.16s system 190% cpu 1.
 | HTML        | ✅ Supported   | ✅ Supported |
 | TXT (newline)| ✅ Supported   | ❌ Not Supported |
 
-
 ## Caveats
+
 1. `qq` is not a full `jq` replacement, some flags may or may not be supported. 
 3. `qq` is under active development, more codecs in the future may be supported along with improvements to `interactive mode`.
 
-
 ## Contributions
+
 All contributions are welcome to `qq`, especially for upkeep/optimization/addition of new encodings.
 
 ## Thanks and Acknowledgements / Related Projects
+
 This tool would not be possible without the following projects, this project is arguably more of a composition of these projects than a truly original work, with glue code, some dedicated encoders/decoders, and the interactive mode being original work.
 Nevertheless, I hope this project can be useful to others, and I hope to contribute back to the community with this project.
 
