@@ -15,14 +15,19 @@ import (
 )
 
 var (
-	focusedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	cursorStyle  = focusedStyle
-	previewStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("178")).Italic(true)
-	outputStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("36"))
-	headerStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)
-	legendStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Italic(true)
-	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
-	borderStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
+	// Enhanced color scheme
+	focusedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B9D")).Bold(true)
+	cursorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")).Background(lipgloss.Color("#FF6B9D")).Bold(true)
+	previewStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Background(lipgloss.Color("#2D2D2D")).Italic(true).Padding(0, 1)
+	outputStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B"))
+	headerStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#8BE9FD")).Bold(true).Underline(true)
+	legendStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#6272A4")).Italic(true)
+	errorStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")).Background(lipgloss.Color("#44475A")).Bold(true).Padding(0, 1)
+	borderStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#44475A"))
+	textAreaStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#FF6B9D")).Padding(0, 1)
+	viewportStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#50FA7B")).Padding(1)
+	successStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B")).Bold(true)
+	warningStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#F1FA8C")).Bold(true)
 )
 
 type model struct {
@@ -46,14 +51,19 @@ func newModel(data string) model {
 
 	t := textarea.New()
 	t.Cursor.Style = cursorStyle
-	t.Placeholder = "Enter jq filter"
+	t.Cursor.Blink = true
+	t.Placeholder = "Enter jq filter (try '.' to start)"
 	t.SetValue(".")
 	t.Focus()
 	t.SetWidth(80)
-	t.SetHeight(3)
+	t.SetHeight(4)
 	t.CharLimit = 0
-	t.ShowLineNumbers = false
+	t.ShowLineNumbers = true
 	t.KeyMap.InsertNewline.SetEnabled(true)
+	// Enhanced textarea styling
+	t.FocusedStyle.CursorLine = lipgloss.NewStyle().Background(lipgloss.Color("#44475A"))
+	t.FocusedStyle.Base = textAreaStyle
+	t.BlurredStyle.Base = textAreaStyle.BorderForeground(lipgloss.Color("#6272A4"))
 	m.textArea = t
 	m.jsonInput = string(data)
 	m.jqOptions = generateJqOptions(m.jsonInput)
@@ -106,12 +116,24 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		headerHeight := 6 // Space for header, textarea, and legend
-		footerHeight := 1
-		availableHeight := msg.Height - headerHeight - footerHeight
+		// Calculate dynamic header height based on actual content
+		headerLines := 4 // Header title + newline + border + 2 newlines
+		textAreaLines := m.textArea.Height()
+		legendLines := 5 // 2 newlines + legend + newline + border + 2 newlines
+		previewLines := 0
+		if m.showingPreview && m.suggestedValue != "" {
+			previewLines = 2 // newline + preview
+		}
+
+		headerHeight := headerLines + textAreaLines + legendLines + previewLines
+		availableHeight := msg.Height - headerHeight
+		if availableHeight < 3 {
+			availableHeight = 3 // Minimum viewport height
+		}
+
 		m.viewport.Width = msg.Width
 		m.viewport.Height = availableHeight
-		m.textArea.SetWidth(msg.Width - 4) // Set width with padding
+		m.textArea.SetWidth(msg.Width - 4)
 		m.updateViewportContent()
 		return m, nil
 
@@ -268,27 +290,29 @@ func (m *model) updateViewportContent() {
 func (m model) View() string {
 	var b strings.Builder
 
-	// Header
-	b.WriteString(headerStyle.Render("🔍 qq Interactive Mode"))
+	// Header with enhanced styling
+	headerText := "qq Interactive Mode - jq Filter Editor"
+	b.WriteString(headerStyle.Render(headerText))
 	b.WriteString("\n")
-	b.WriteString(borderStyle.Render(strings.Repeat("─", 50)))
-	b.WriteString("\n")
+	b.WriteString(borderStyle.Render(strings.Repeat("━", len(headerText)+4)))
+	b.WriteString("\n\n")
 
 	// Text area
 	b.WriteString(m.textArea.View())
 
-	// Preview suggestion
+	// Preview suggestion with better styling
 	if m.showingPreview && m.suggestedValue != "" {
 		b.WriteString("\n")
-		b.WriteString(previewStyle.Render("💡 Suggestion: " + m.suggestedValue))
+		b.WriteString(previewStyle.Render("Suggestion: " + m.suggestedValue))
 	}
 
-	// Legend
+	// Enhanced legend with better formatting
+	b.WriteString("\n\n")
+	legendText := "Tab: autocomplete | Enter: accept/newline | Ctrl+C/Esc: execute & exit | ↑↓: scroll"
+	b.WriteString(legendStyle.Render(legendText))
 	b.WriteString("\n")
-	b.WriteString(legendStyle.Render("Tab: autocomplete | Enter: accept/newline | Ctrl+C/Esc: execute & exit | ↑↓: scroll"))
-	b.WriteString("\n")
-	b.WriteString(borderStyle.Render(strings.Repeat("─", 50)))
-	b.WriteString("\n")
+	b.WriteString(borderStyle.Render(strings.Repeat("─", len(legendText))))
+	b.WriteString("\n\n")
 
 	// Output viewport
 	b.WriteString(m.viewport.View())
