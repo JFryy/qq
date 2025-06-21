@@ -38,9 +38,22 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 	}
 
 	cfg := ini.Empty()
+	defaultSection := cfg.Section("")
+
 	for section, sectionValue := range data {
 		sectionMap, ok := sectionValue.(map[string]any)
 		if !ok {
+			// Handle scalar values by putting them in the default section
+			var valueStr string
+			if sectionValue == nil {
+				valueStr = ""
+			} else {
+				valueStr = fmt.Sprintf("%v", sectionValue)
+			}
+			_, err := defaultSection.NewKey(section, valueStr)
+			if err != nil {
+				return nil, err
+			}
 			continue
 		}
 
@@ -50,7 +63,13 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 		}
 
 		for key, value := range sectionMap {
-			_, err := sec.NewKey(key, fmt.Sprintf("%v", value))
+			var valueStr string
+			if value == nil {
+				valueStr = ""
+			} else {
+				valueStr = fmt.Sprintf("%v", value)
+			}
+			_, err := sec.NewKey(key, valueStr)
 			if err != nil {
 				return nil, err
 			}
