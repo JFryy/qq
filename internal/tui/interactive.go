@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/JFryy/qq/codec"
-	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -19,10 +19,14 @@ var (
 	cursorStyle  = focusedStyle
 	previewStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("178")).Italic(true)
 	outputStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("36"))
+	headerStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)
+	legendStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Italic(true)
+	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
+	borderStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
 )
 
 type model struct {
-	inputs         []textinput.Model
+	textArea       textarea.Model
 	jsonInput      string
 	jqOutput       string
 	lastOutput     string
@@ -32,22 +36,25 @@ type model struct {
 	suggestedValue string
 	jsonObj        any
 	viewport       viewport.Model
+	gracefulExit   bool
 }
 
 func newModel(data string) model {
 	m := model{
-		inputs:   make([]textinput.Model, 1),
 		viewport: viewport.New(0, 0),
 	}
 
-	t := textinput.New()
+	t := textarea.New()
 	t.Cursor.Style = cursorStyle
 	t.Placeholder = "Enter jq filter"
 	t.SetValue(".")
 	t.Focus()
-	t.PromptStyle = focusedStyle
-	t.TextStyle = focusedStyle
-	m.inputs[0] = t
+	t.SetWidth(80)
+	t.SetHeight(3)
+	t.CharLimit = 0
+	t.ShowLineNumbers = false
+	t.KeyMap.InsertNewline.SetEnabled(true)
+	m.textArea = t
 	m.jsonInput = string(data)
 	m.jqOptions = generateJqOptions(m.jsonInput)
 
@@ -99,21 +106,27 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		headerHeight := 2
+		headerHeight := 6 // Space for header, textarea, and legend
 		footerHeight := 1
 		availableHeight := msg.Height - headerHeight - footerHeight
 		m.viewport.Width = msg.Width
 		m.viewport.Height = availableHeight
+		m.textArea.SetWidth(msg.Width - 4) // Set width with padding
 		m.updateViewportContent()
 		return m, nil
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "esc":
+		switch {
+		case msg.String() == "ctrl+c" || msg.String() == "esc":
+			// Try to run current query if it's valid, otherwise just exit
+			if m.isValidQuery() {
+				m.gracefulExit = true
+				m.jsonObj, _ = jsonStrToInterface(m.jsonInput)
+			}
 			return m, tea.Quit
 
-			// Suggest next jq option
-		case "tab":
+		// Suggest next jq option
+		case msg.String() == "tab":
 			if !m.showingPreview {
 				m.showingPreview = true
 				m.currentIndex = 0
@@ -123,29 +136,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.suggestedValue = m.jqOptions[m.currentIndex]
 			return m, nil
 
-		case "enter":
+		case msg.String() == "enter":
 			if m.showingPreview {
-				m.inputs[0].SetValue(m.suggestedValue)
+				m.textArea.SetValue(m.suggestedValue)
 				m.showingPreview = false
 				m.suggestedValue = ""
 				m.runJqFilter()
 				return m, nil
 			}
-			m.jsonObj, _ = jsonStrToInterface(m.jsonInput)
-			return m, tea.Quit
+			// Let the textarea handle the enter key for newlines - don't intercept it
+			break
 
-		case "up":
+		case msg.String() == "up":
 			m.viewport.LineUp(1)
 			return m, nil
 
-		case "down":
+		case msg.String() == "down":
 			m.viewport.LineDown(1)
 			return m, nil
 
-		case "pageup":
+		case msg.String() == "pageup":
 			m.viewport.ViewUp()
 			return m, nil
-		case "pagedown":
+		case msg.String() == "pagedown":
 			m.viewport.ViewDown()
 			return m, nil
 
@@ -168,12 +181,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
-	cmds := make([]tea.Cmd, len(m.inputs))
-	for i := range m.inputs {
-		m.inputs[i], cmds[i] = m.inputs[i].Update(msg)
-	}
+	var cmd tea.Cmd
+	m.textArea, cmd = m.textArea.Update(msg)
+	return cmd
+}
 
-	return tea.Batch(cmds...)
+func (m model) isValidQuery() bool {
+	query := strings.TrimSpace(m.textArea.Value())
+	if query == "" {
+		return false
+	}
+	_, err := gojq.Parse(query)
+	return err == nil
 }
 
 func jsonStrToInterface(jsonStr string) (any, error) {
@@ -186,7 +205,7 @@ func jsonStrToInterface(jsonStr string) (any, error) {
 }
 
 func (m *model) runJqFilter() {
-	query, err := gojq.Parse(m.inputs[0].Value())
+	query, err := gojq.Parse(m.textArea.Value())
 	if err != nil {
 		m.jqOutput = fmt.Sprintf("Invalid jq query: %s\n\nLast valid output:\n%s", err, m.lastOutput)
 		m.updateViewportContent()
@@ -249,33 +268,51 @@ func (m *model) updateViewportContent() {
 func (m model) View() string {
 	var b strings.Builder
 
-	for i := range m.inputs {
-		if m.showingPreview && m.suggestedValue != "" {
-			b.WriteString(m.inputs[i].View() + previewStyle.Render(m.suggestedValue))
-		} else {
-			b.WriteString(m.inputs[i].View())
-		}
-		if i < len(m.inputs)-1 {
-			b.WriteRune('\n')
-		}
+	// Header
+	b.WriteString(headerStyle.Render("🔍 qq Interactive Mode"))
+	b.WriteString("\n")
+	b.WriteString(borderStyle.Render(strings.Repeat("─", 50)))
+	b.WriteString("\n")
+
+	// Text area
+	b.WriteString(m.textArea.View())
+
+	// Preview suggestion
+	if m.showingPreview && m.suggestedValue != "" {
+		b.WriteString("\n")
+		b.WriteString(previewStyle.Render("💡 Suggestion: " + m.suggestedValue))
 	}
 
+	// Legend
 	b.WriteString("\n")
+	b.WriteString(legendStyle.Render("Tab: autocomplete | Enter: accept/newline | Ctrl+C/Esc: execute & exit | ↑↓: scroll"))
+	b.WriteString("\n")
+	b.WriteString(borderStyle.Render(strings.Repeat("─", 50)))
+	b.WriteString("\n")
+
+	// Output viewport
 	b.WriteString(m.viewport.View())
 
 	return b.String()
 }
 
 func printOutput(m model) {
-	s := m.inputs[0].Value()
-	fmt.Printf("\033[32m%s\033[0m\n", s)
-	o, err := codec.PrettyFormat(m.jqOutput, codec.JSON, false, false)
-	if err != nil {
-		fmt.Println("Error formatting output:", err)
-		os.Exit(1)
+	if m.gracefulExit {
+		// Graceful exit with formatted output
+		s := m.textArea.Value()
+		fmt.Printf("\033[36m# Query: %s\033[0m\n", s)
+		o, err := codec.PrettyFormat(m.jqOutput, codec.JSON, false, false)
+		if err != nil {
+			fmt.Printf("\033[31mError formatting output: %s\033[0m\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(o)
+		os.Exit(0)
+	} else {
+		// Abrupt exit
+		fmt.Println("\033[33mExited without executing query\033[0m")
+		os.Exit(0)
 	}
-	fmt.Println(o)
-	os.Exit(0)
 }
 
 func Interact(s string) {
