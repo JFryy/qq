@@ -43,7 +43,7 @@ func CreateRootCmd() *cobra.Command {
 				}
 				os.Exit(0)
 			}
-			handleCommand(args, inputType, outputType, rawOutput, help, interactive)
+			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive)
 		},
 	}
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
@@ -56,7 +56,7 @@ func CreateRootCmd() *cobra.Command {
 	return cmd
 }
 
-func handleCommand(args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool) {
+func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool) {
 	var input []byte
 	var err error
 	var expression string
@@ -107,10 +107,15 @@ func handleCommand(args []string, inputtype string, outputtype string, rawInput 
 	}
 
 	var inputCodec codec.EncodingType
-	if filename != "" {
-		if inputtype == "json" {
-			inputCodec = inferFileType(filename)
-		}
+	// Check if -i flag was explicitly set by user
+	inputFlagSet := cmd.Flags().Changed("input")
+
+	if inputFlagSet {
+		// -i flag takes precedence over file extension
+		inputCodec, err = codec.GetEncodingType(inputtype)
+	} else if filename != "" {
+		// Infer from file extension when no -i flag is set
+		inputCodec = inferFileType(filename)
 	} else {
 		inputCodec, err = codec.GetEncodingType(inputtype)
 	}

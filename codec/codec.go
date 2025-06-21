@@ -9,7 +9,6 @@ import (
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
 	"github.com/goccy/go-json"
-	"github.com/goccy/go-yaml"
 	"github.com/mattn/go-isatty"
 	"os"
 	"strings"
@@ -23,6 +22,7 @@ import (
 	"github.com/JFryy/qq/codec/line"
 	proto "github.com/JFryy/qq/codec/proto"
 	"github.com/JFryy/qq/codec/xml"
+	"github.com/JFryy/qq/codec/yaml"
 )
 
 // EncodingType represents the supported encoding types as an enum with a string representation
@@ -75,11 +75,12 @@ var (
 	lines = line.Codec{}
 	sv    = csv.Codec{}
 	pb    = proto.Codec{}
+	yml   = yaml.Codec{}
 )
 var SupportedFileTypes = []Encoding{
 	{JSON, json.Unmarshal, jsn.Marshal},
-	{YAML, yaml.Unmarshal, yaml.Marshal},
-	{YML, yaml.Unmarshal, yaml.Marshal},
+	{YAML, yml.Unmarshal, yml.Marshal},
+	{YML, yml.Unmarshal, yml.Marshal},
 	{TOML, toml.Unmarshal, toml.Marshal},
 	{HCL, hcltf.Unmarshal, hcltf.Marshal},
 	{TF, hcltf.Unmarshal, hcltf.Marshal},

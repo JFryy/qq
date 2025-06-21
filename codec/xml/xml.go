@@ -18,7 +18,7 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 		mv := mxj.Map(map[string]any{"root": v})
 		return mv.XmlIndent("", "  ")
 	default:
-			mv := mxj.Map(map[string]any{"value": v})
+		mv := mxj.Map(map[string]any{"value": v})
 		return mv.XmlIndent("", "  ")
 	}
 }
