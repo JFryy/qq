@@ -121,7 +121,7 @@ func Marshal(v any, outputFileType EncodingType) ([]byte, error) {
 	return nil, fmt.Errorf("unsupported output file type: %v", outputFileType)
 }
 
-func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
+func PrettyFormat(s string, fileType EncodingType, raw bool, monochrome bool) (string, error) {
 	if raw {
 		var v any
 		err := Unmarshal([]byte(s), fileType, &v)
@@ -138,7 +138,7 @@ func PrettyFormat(s string, fileType EncodingType, raw bool) (string, error) {
 		}
 	}
 
-	if !isatty.IsTerminal(os.Stdout.Fd()) {
+	if !isatty.IsTerminal(os.Stdout.Fd()) || monochrome {
 		return s, nil
 	}
 

@@ -18,6 +18,7 @@ func CreateRootCmd() *cobra.Command {
 	var interactive bool
 	var version bool
 	var help bool
+	var monochrome bool
 	var encodings string
 	for _, t := range codec.SupportedFileTypes {
 		encodings += t.Ext.String() + ", "
@@ -43,7 +44,7 @@ func CreateRootCmd() *cobra.Command {
 				}
 				os.Exit(0)
 			}
-			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive)
+			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome)
 		},
 	}
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
@@ -52,11 +53,12 @@ func CreateRootCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&help, "help", "h", false, "help for qq")
 	cmd.Flags().BoolVarP(&version, "version", "v", false, "version for qq")
 	cmd.Flags().BoolVarP(&interactive, "interactive", "I", false, "interactive mode for qq")
+	cmd.Flags().BoolVarP(&monochrome, "monochrome-output", "M", false, "disable colored output")
 
 	return cmd
 }
 
-func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool) {
+func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool) {
 	var input []byte
 	var err error
 	var expression string
@@ -142,7 +144,7 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 			os.Exit(1)
 		}
 
-		executeQuery(query, data, outputCodec, rawInput)
+		executeQuery(query, data, outputCodec, rawInput, monochrome)
 		os.Exit(0)
 	}
 
@@ -184,7 +186,7 @@ func inferFileType(fName string) codec.EncodingType {
 	return codec.JSON
 }
 
-func executeQuery(query *gojq.Query, data any, fileType codec.EncodingType, rawOut bool) {
+func executeQuery(query *gojq.Query, data any, fileType codec.EncodingType, rawOut bool, monochrome bool) {
 	iter := query.Run(data)
 	for {
 		v, ok := iter.Next()
@@ -201,7 +203,7 @@ func executeQuery(query *gojq.Query, data any, fileType codec.EncodingType, rawO
 			fmt.Printf("Error formatting result: %v\n", err)
 			os.Exit(1)
 		}
-		r, _ := codec.PrettyFormat(s, fileType, rawOut)
+		r, _ := codec.PrettyFormat(s, fileType, rawOut, monochrome)
 		fmt.Println(r)
 	}
 }

@@ -238,7 +238,7 @@ func (m *model) runJqFilter() {
 }
 
 func (m *model) updateViewportContent() {
-	prettyOutput, err := codec.PrettyFormat(m.jqOutput, codec.JSON, false)
+	prettyOutput, err := codec.PrettyFormat(m.jqOutput, codec.JSON, false, false)
 	if err != nil {
 		m.viewport.SetContent(fmt.Sprintf("Error formatting output: %s", err))
 		return
@@ -269,7 +269,7 @@ func (m model) View() string {
 func printOutput(m model) {
 	s := m.inputs[0].Value()
 	fmt.Printf("\033[32m%s\033[0m\n", s)
-	o, err := codec.PrettyFormat(m.jqOutput, codec.JSON, false)
+	o, err := codec.PrettyFormat(m.jqOutput, codec.JSON, false, false)
 	if err != nil {
 		fmt.Println("Error formatting output:", err)
 		os.Exit(1)
