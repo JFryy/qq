@@ -21,7 +21,7 @@ import (
 	"github.com/JFryy/qq/codec/ini"
 	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/JFryy/qq/codec/line"
-	"github.com/JFryy/qq/codec/markdown"
+	"github.com/JFryy/qq/codec/parquet"
 	proto "github.com/JFryy/qq/codec/proto"
 	"github.com/JFryy/qq/codec/xml"
 	"github.com/JFryy/qq/codec/yaml"
@@ -45,13 +45,12 @@ const (
 	LINE
 	TXT
 	PROTO
-	MARKDOWN
-	MD
 	ENV
+	PARQUET
 )
 
 func (e EncodingType) String() string {
-	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt", "proto", "markdown", "md", "env"}[e]
+	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt", "proto", "env", "parquet"}[e]
 }
 
 type Encoding struct {
@@ -71,18 +70,18 @@ func GetEncodingType(fileType string) (EncodingType, error) {
 }
 
 var (
-	htm      = html.Codec{}
-	jsn      = qqjson.Codec{} // wrapper for go-json marshal
-	grn      = gron.Codec{}
-	hcltf    = hcl.Codec{}
-	xmll     = xml.Codec{}
-	inii     = ini.Codec{}
-	lines    = line.Codec{}
-	sv       = csv.Codec{}
-	pb       = proto.Codec{}
-	yml      = yaml.Codec{}
-	md       = markdown.NewCodec()
-	envCodec = env.Codec{}
+	htm          = html.Codec{}
+	jsn          = qqjson.Codec{} // wrapper for go-json marshal
+	grn          = gron.Codec{}
+	hcltf        = hcl.Codec{}
+	xmll         = xml.Codec{}
+	inii         = ini.Codec{}
+	lines        = line.Codec{}
+	sv           = csv.Codec{}
+	pb           = proto.Codec{}
+	yml          = yaml.Codec{}
+	envCodec     = env.Codec{}
+	parquetCodec = parquet.Codec{}
 )
 var SupportedFileTypes = []Encoding{
 	{JSON, json.Unmarshal, jsn.Marshal},
@@ -99,9 +98,8 @@ var SupportedFileTypes = []Encoding{
 	{LINE, lines.Unmarshal, jsn.Marshal},
 	{TXT, lines.Unmarshal, jsn.Marshal},
 	{PROTO, pb.Unmarshal, jsn.Marshal},
-	{MARKDOWN, md.Unmarshal, md.Marshal},
-	{MD, md.Unmarshal, md.Marshal},
 	{ENV, envCodec.Unmarshal, envCodec.Marshal},
+	{PARQUET, parquetCodec.Unmarshal, parquetCodec.Marshal},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data any) error {
@@ -154,7 +152,7 @@ func PrettyFormat(s string, fileType EncodingType, raw bool, monochrome bool) (s
 
 	var lexer chroma.Lexer
 	// this a workaround for json lexer while we don't have a marshal function dedicated for these formats.
-	if fileType == CSV || fileType == HTML || fileType == LINE || fileType == TXT || fileType == MARKDOWN || fileType == MD || fileType == ENV {
+	if fileType == CSV || fileType == HTML || fileType == LINE || fileType == TXT || fileType == ENV || fileType == PARQUET {
 		lexer = lexers.Get("json")
 	} else {
 		lexer = lexers.Get(fileType.String())
@@ -182,4 +180,8 @@ func PrettyFormat(s string, fileType EncodingType, raw bool, monochrome bool) (s
 	}
 
 	return buffer.String(), nil
+}
+
+func IsBinaryFormat(fileType EncodingType) bool {
+	return fileType == PARQUET
 }

@@ -198,12 +198,18 @@ func executeQuery(query *gojq.Query, data any, fileType codec.EncodingType, rawO
 			os.Exit(1)
 		}
 		b, err := codec.Marshal(v, fileType)
-		s := string(b)
 		if err != nil {
 			fmt.Printf("Error formatting result: %v\n", err)
 			os.Exit(1)
 		}
-		r, _ := codec.PrettyFormat(s, fileType, rawOut, monochrome)
-		fmt.Println(r)
+
+		if codec.IsBinaryFormat(fileType) {
+			// For binary formats, write directly to stdout as raw bytes
+			os.Stdout.Write(b)
+		} else {
+			s := string(b)
+			r, _ := codec.PrettyFormat(s, fileType, rawOut, monochrome)
+			fmt.Println(r)
+		}
 	}
 }
