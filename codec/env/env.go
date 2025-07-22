@@ -5,20 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
 // Codec handles environment file parsing and marshaling
 type Codec struct{}
-
-// EnvVar represents a single environment variable with metadata
-type EnvVar struct {
-	Value    interface{} `json:"value"`
-	Type     string      `json:"type"`
-	Comment  string      `json:"comment,omitempty"`
-	Exported bool        `json:"exported"`
-}
 
 // Unmarshal parses environment file data into the provided interface
 func (c *Codec) Unmarshal(data []byte, v interface{}) error {
@@ -47,53 +38,33 @@ func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	var envVars map[string]interface{}
+	var envVars map[string]string
 	if err := json.Unmarshal(data, &envVars); err != nil {
-		return nil, err
+		return nil, errors.New("env format only supports simple key-value pairs, cannot convert complex nested structures")
 	}
 
 	var lines []string
 	for key, value := range envVars {
-		// Handle both simple values and EnvVar structs
-		switch val := value.(type) {
-		case map[string]interface{}:
-			// This is an EnvVar struct
-			if v, exists := val["value"]; exists {
-				line := fmt.Sprintf("%s=%s", key, c.formatValue(v))
-				if comment, hasComment := val["comment"].(string); hasComment && comment != "" {
-					line += " # " + comment
-				}
-				lines = append(lines, line)
-			}
-		default:
-			// Simple key=value
-			lines = append(lines, fmt.Sprintf("%s=%s", key, c.formatValue(val)))
-		}
+		lines = append(lines, fmt.Sprintf("%s=%s", key, c.formatValue(value)))
 	}
 
 	return []byte(strings.Join(lines, "\n")), nil
 }
 
-// Parse processes environment file content into structured data
-func (c *Codec) Parse(content string) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
+// Parse processes environment file content into simple key-value pairs
+func (c *Codec) Parse(content string) (map[string]string, error) {
+	result := make(map[string]string)
 	lines := strings.Split(content, "\n")
 
-	// Patterns for parsing
+	// Pattern for parsing variable assignments
 	varPattern := regexp.MustCompile(`^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$`)
-	commentPattern := regexp.MustCompile(`^#\s*(.*)$`)
 
-	for lineNum, line := range lines {
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Skip empty lines
-		if line == "" {
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
 			continue
-		}
-
-		// Handle comments
-		if commentPattern.MatchString(line) {
-			continue // Skip standalone comments for now
 		}
 
 		// Parse variable assignment
@@ -101,29 +72,19 @@ func (c *Codec) Parse(content string) (map[string]interface{}, error) {
 			key := matches[1]
 			valueWithComment := matches[2]
 
-			// Check if exported
-			exported := strings.HasPrefix(strings.TrimSpace(lines[lineNum]), "export")
-
-			// Split value and inline comment
-			value, comment := c.parseValueAndComment(valueWithComment)
-
-			// Parse and type the value
-			parsedValue, valueType := c.parseValue(value)
-
-			result[key] = &EnvVar{
-				Value:    parsedValue,
-				Type:     valueType,
-				Comment:  comment,
-				Exported: exported,
-			}
+			// Extract just the value, ignoring comments
+			value := c.extractValue(valueWithComment)
+			result[key] = value
 		}
 	}
 
 	return result, nil
 }
 
-// parseValueAndComment separates value from inline comments
-func (c *Codec) parseValueAndComment(input string) (string, string) {
+// extractValue extracts the value part from a line, handling quotes and ignoring comments
+func (c *Codec) extractValue(input string) string {
+	input = strings.TrimSpace(input)
+
 	// Handle quoted strings first
 	if strings.HasPrefix(input, `"`) {
 		// Find the closing quote, handling escaped quotes
@@ -138,107 +99,67 @@ func (c *Codec) parseValueAndComment(input string) (string, string) {
 				continue
 			}
 			if input[i] == '"' {
-				// Found end quote
-				value := input[:i+1]
-				remainder := strings.TrimSpace(input[i+1:])
-				if strings.HasPrefix(remainder, "#") {
-					return value, strings.TrimSpace(remainder[1:])
+				// Found end quote, remove outer quotes and handle escapes
+				unquoted := input[1:i]
+				// Handle specific escape sequences only
+				// Use a more careful approach to avoid double-processing
+				result := ""
+				for j := 0; j < len(unquoted); j++ {
+					if j < len(unquoted)-1 && unquoted[j] == '\\' {
+						switch unquoted[j+1] {
+						case '"':
+							result += `"`
+							j++ // skip next char
+						case 'n':
+							result += "\n"
+							j++ // skip next char
+						case 't':
+							result += "\t"
+							j++ // skip next char
+						case '\\':
+							result += `\`
+							j++ // skip next char
+						default:
+							result += string(unquoted[j])
+						}
+					} else {
+						result += string(unquoted[j])
+					}
 				}
-				return value, ""
+				return result
 			}
 		}
-		// No closing quote found, treat as is
-		return input, ""
+		// No closing quote found, return as is without outer quotes
+		return input[1:]
 	}
 
 	if strings.HasPrefix(input, "'") {
-		// Similar logic for single quotes
+		// Similar logic for single quotes (no escape processing)
 		for i := 1; i < len(input); i++ {
 			if input[i] == '\'' {
-				value := input[:i+1]
-				remainder := strings.TrimSpace(input[i+1:])
-				if strings.HasPrefix(remainder, "#") {
-					return value, strings.TrimSpace(remainder[1:])
-				}
-				return value, ""
+				return input[1:i]
 			}
 		}
-		return input, ""
+		return input[1:]
 	}
 
-	// Unquoted value - look for comment
+	// Unquoted value - look for comment and strip it
 	if idx := strings.Index(input, "#"); idx != -1 {
-		value := strings.TrimSpace(input[:idx])
-		comment := strings.TrimSpace(input[idx+1:])
-		return value, comment
+		return strings.TrimSpace(input[:idx])
 	}
 
-	return strings.TrimSpace(input), ""
+	return input
 }
 
-// parseValue attempts to parse a value into appropriate Go type
-func (c *Codec) parseValue(value string) (interface{}, string) {
-	value = strings.TrimSpace(value)
-
-	// Handle quoted strings
-	if (strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`)) ||
-		(strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) {
-		// Remove quotes and handle escape sequences for double quotes
-		unquoted := value[1 : len(value)-1]
-		if strings.HasPrefix(value, `"`) {
-			unquoted = strings.ReplaceAll(unquoted, `\"`, `"`)
-			unquoted = strings.ReplaceAll(unquoted, `\\`, `\`)
-			unquoted = strings.ReplaceAll(unquoted, `\n`, "\n")
-			unquoted = strings.ReplaceAll(unquoted, `\t`, "\t")
-		}
-		return unquoted, "string"
+// formatValue converts a string value back to env file format
+func (c *Codec) formatValue(value string) string {
+	// Quote if contains spaces or special characters
+	if strings.ContainsAny(value, " \t\n#=") || value == "" {
+		escaped := strings.ReplaceAll(value, `\`, `\\`)
+		escaped = strings.ReplaceAll(escaped, `"`, `\"`)
+		escaped = strings.ReplaceAll(escaped, "\n", `\n`)
+		escaped = strings.ReplaceAll(escaped, "\t", `\t`)
+		return fmt.Sprintf(`"%s"`, escaped)
 	}
-
-	// Try to parse as integer
-	if intVal, err := strconv.ParseInt(value, 10, 64); err == nil {
-		return intVal, "integer"
-	}
-
-	// Try to parse as float
-	if floatVal, err := strconv.ParseFloat(value, 64); err == nil {
-		return floatVal, "number"
-	}
-
-	// Try to parse as boolean
-	switch strings.ToLower(value) {
-	case "true", "yes", "1", "on":
-		return true, "boolean"
-	case "false", "no", "0", "off":
-		return false, "boolean"
-	}
-
-	// Default to string
-	return value, "string"
-}
-
-// formatValue converts a value back to env file format
-func (c *Codec) formatValue(value interface{}) string {
-	switch v := value.(type) {
-	case string:
-		// Quote if contains spaces or special characters
-		if strings.ContainsAny(v, " \t\n#=") || v == "" {
-			escaped := strings.ReplaceAll(v, `\`, `\\`)
-			escaped = strings.ReplaceAll(escaped, `"`, `\"`)
-			escaped = strings.ReplaceAll(escaped, "\n", `\n`)
-			escaped = strings.ReplaceAll(escaped, "\t", `\t`)
-			return fmt.Sprintf(`"%s"`, escaped)
-		}
-		return v
-	case bool:
-		if v {
-			return "true"
-		}
-		return "false"
-	case int, int32, int64:
-		return fmt.Sprintf("%d", v)
-	case float32, float64:
-		return fmt.Sprintf("%g", v)
-	default:
-		return fmt.Sprintf("%v", v)
-	}
+	return value
 }
