@@ -1,3 +1,11 @@
+# .owner.name
+# .database.port
+# .servers.alpha.ip
+# '.servers | to_entries | map(.key)'
+# '.database | keys | sort'
+# '[.database.port, .database.connection_max] | add'
+# '.clients.data | flatten | sort'
+# '.database.enabled | if . then "ONLINE" else "OFFLINE" end'
 title = "TOML Example"
 
 [owner]
