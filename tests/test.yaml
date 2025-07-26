@@ -1,3 +1,9 @@
+# .test.thing.example
+# keys
+# '.test.example | map(. + "_processed") | reverse'
+# '.test | to_entries | map(.key)'
+# 'keys | length'
+# '.test.example | sort'
 test:
   example: [a,b,c,d]
   thing:

@@ -1,3 +1,9 @@
+# .name
+# .address.city
+# '.children | map(.name) | join(", ")'
+# '.phone | to_entries | map("\(.key): \(.value)") | join(" | ")'
+# '{full_name: .name, location: .address.city, child_count: (.children | length)}'
+# 'if .active then "ACTIVE_USER" else "INACTIVE_USER" end'
 {
   "name": "John Doe",
   "age": 30,
@@ -25,4 +31,3 @@
   "tags": ["tag1", "tag2", "tag3"],
   "active": true
 }
-
