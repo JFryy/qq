@@ -117,7 +117,9 @@ qq large-file.json -o yaml > /dev/null 2>&1  2.72s user 0.16s system 190% cpu 1.
 | CSV         | ✅ Supported   | ✅ Supported |
 | Proto (.proto)    | ✅ Supported | ❌ Not Supported |
 | HTML        | ✅ Supported   | ✅ Supported |
-| TXT (newline)| ✅ Supported   | ❌ Not Supported |
+| TXT (newline)| ✅ Supported  | ❌ Not Supported |
+| ENV         | ✅ Supported | ❌ Not Supported |
+| PARQUET     | ✅ Supported | ❌ Not Supported |
 
 ## Caveats
 
