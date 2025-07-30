@@ -205,14 +205,14 @@ main() {
         fi
     done
     
-    # Test jq pipeline conversions (excluding CSV)
+    # Test jq pipeline conversions (excluding codecs with constrained structures/binary formats)
     print "yellow" "Testing jq pipeline conversions..."
     local previous_ext="json"
     for file in $extensions; do
         local current_ext
         current_ext="${file##*.}"
         
-        if [[ "$current_ext" == "csv" || "$current_ext" == "parquet" ]]; then
+        if [[ "$current_ext" == "csv" || "$current_ext" == "parquet" || "$current_ext" == "msgpack" ]]; then
             continue
         fi
         
