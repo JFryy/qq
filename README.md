@@ -1,5 +1,12 @@
 # qq
 
+[![Go](https://github.com/JFryy/qq/actions/workflows/go.yml/badge.svg)](https://github.com/JFryy/qq/actions/workflows/go.yml)
+[![Docker Build](https://github.com/JFryy/qq/actions/workflows/docker-image.yml/badge.svg)](https://github.com/JFryy/qq/actions/workflows/docker-image.yml)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/JFryy/qq)](https://golang.org/)
+[![License](https://img.shields.io/github/license/JFryy/qq)](https://github.com/JFryy/qq/blob/main/LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/JFryy/qq)](https://github.com/JFryy/qq/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/jfryy/qq)](https://hub.docker.com/r/jfryy/qq)
+
 `qq` is an interoperable configuration format transcoder with `jq` query syntax powered by `gojq`. `qq` is multi modal, and can be used as a replacement for `jq` or be interacted with via a REPL with autocomplete and realtime rendering preview for building queries.
 
 ## Usage
