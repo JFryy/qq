@@ -178,7 +178,7 @@ main() {
             # Run the conversion test
             local test_name="$input_ext -> $output_ext"
             local command
-            if [[ "$input_ext" == "parquet" ]]; then
+            if [[ "$input_ext" == "parquet" || "$input_ext" == "msgpack" ]]; then
                 # Parquet files are binary, use qq directly 
                 command="bin/qq '$input_file' | bin/qq -o '$output_ext'"
             else
@@ -188,7 +188,7 @@ main() {
         done
         
         # Test embedded test cases (lines with # comments) - skip for binary files
-        if [[ "$input_ext" != "parquet" ]] && grep -q "#" "$input_file" 2>/dev/null; then
+        if [[ "$input_ext" != "parquet" || "$input_ext" != "msgpack" ]] && grep -q "#" "$input_file" 2>/dev/null; then
             # Process each line with a # comment individually
             while IFS= read -r line; do
                 if [[ "$line" =~ ^#[[:space:]]*(.+)$ ]]; then
