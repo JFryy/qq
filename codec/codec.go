@@ -21,6 +21,7 @@ import (
 	"github.com/JFryy/qq/codec/ini"
 	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/JFryy/qq/codec/line"
+	"github.com/JFryy/qq/codec/msgpack"
 	"github.com/JFryy/qq/codec/parquet"
 	proto "github.com/JFryy/qq/codec/proto"
 	"github.com/JFryy/qq/codec/xml"
@@ -47,10 +48,12 @@ const (
 	PROTO
 	ENV
 	PARQUET
+	MSGPACK
+	MPK
 )
 
 func (e EncodingType) String() string {
-	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt", "proto", "env", "parquet"}[e]
+	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt", "proto", "env", "parquet", "msgpack", "mpk"}[e]
 }
 
 type Encoding struct {
@@ -82,6 +85,7 @@ var (
 	yml          = yaml.Codec{}
 	envCodec     = env.Codec{}
 	parquetCodec = parquet.Codec{}
+	msgpackCodec = msgpack.Codec{}
 )
 var SupportedFileTypes = []Encoding{
 	{JSON, json.Unmarshal, jsn.Marshal},
@@ -100,6 +104,8 @@ var SupportedFileTypes = []Encoding{
 	{PROTO, pb.Unmarshal, jsn.Marshal},
 	{ENV, envCodec.Unmarshal, envCodec.Marshal},
 	{PARQUET, parquetCodec.Unmarshal, parquetCodec.Marshal},
+	{MSGPACK, msgpackCodec.Unmarshal, msgpackCodec.Marshal},
+	{MPK, msgpackCodec.Unmarshal, msgpackCodec.Marshal},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data any) error {
@@ -152,7 +158,7 @@ func PrettyFormat(s string, fileType EncodingType, raw bool, monochrome bool) (s
 
 	var lexer chroma.Lexer
 	// this a workaround for json lexer while we don't have a marshal function dedicated for these formats.
-	if fileType == CSV || fileType == HTML || fileType == LINE || fileType == TXT || fileType == ENV || fileType == PARQUET {
+	if fileType == CSV || fileType == HTML || fileType == LINE || fileType == TXT || fileType == ENV || fileType == PARQUET || fileType == MSGPACK || fileType == MPK {
 		lexer = lexers.Get("json")
 	} else {
 		lexer = lexers.Get(fileType.String())
@@ -183,5 +189,5 @@ func PrettyFormat(s string, fileType EncodingType, raw bool, monochrome bool) (s
 }
 
 func IsBinaryFormat(fileType EncodingType) bool {
-	return fileType == PARQUET
+	return fileType == PARQUET || fileType == MSGPACK || fileType == MPK
 }
