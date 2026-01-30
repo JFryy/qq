@@ -1,17 +1,12 @@
 package codec
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"github.com/alecthomas/chroma"
-	"github.com/alecthomas/chroma/formatters"
-	"github.com/alecthomas/chroma/lexers"
-	"github.com/alecthomas/chroma/styles"
-	"github.com/goccy/go-json"
-	"github.com/mattn/go-isatty"
-	"os"
 	"strings"
+
+	"github.com/BurntSushi/toml"
+	"github.com/goccy/go-json"
+
 	// dedicated codec packages and wrappers where appropriate
 	"github.com/JFryy/qq/codec/csv"
 	"github.com/JFryy/qq/codec/env"
@@ -133,59 +128,6 @@ func Marshal(v any, outputFileType EncodingType) ([]byte, error) {
 		}
 	}
 	return nil, fmt.Errorf("unsupported output file type: %v", outputFileType)
-}
-
-func PrettyFormat(s string, fileType EncodingType, raw bool, monochrome bool) (string, error) {
-	if raw {
-		var v any
-		err := Unmarshal([]byte(s), fileType, &v)
-		if err != nil {
-			return "", err
-		}
-		switch v.(type) {
-		case map[string]any:
-			break
-		case []any:
-			break
-		default:
-			return strings.ReplaceAll(s, "\"", ""), nil
-		}
-	}
-
-	if !isatty.IsTerminal(os.Stdout.Fd()) || monochrome {
-		return s, nil
-	}
-
-	var lexer chroma.Lexer
-	// this a workaround for json lexer while we don't have a marshal function dedicated for these formats.
-	if fileType == CSV || fileType == HTML || fileType == LINE || fileType == TXT || fileType == ENV || fileType == PARQUET || fileType == MSGPACK || fileType == MPK {
-		lexer = lexers.Get("json")
-	} else {
-		lexer = lexers.Get(fileType.String())
-		if lexer == nil {
-			lexer = lexers.Fallback
-		}
-	}
-
-	if lexer == nil {
-		return "", fmt.Errorf("unsupported file type for formatting: %v", fileType)
-	}
-
-	iterator, err := lexer.Tokenise(nil, s)
-	if err != nil {
-		return "", fmt.Errorf("error tokenizing input: %v", err)
-	}
-
-	style := styles.Get("nord")
-	formatter := formatters.Get("terminal256")
-	var buffer bytes.Buffer
-
-	err = formatter.Format(&buffer, style, iterator)
-	if err != nil {
-		return "", fmt.Errorf("error formatting output: %v", err)
-	}
-
-	return buffer.String(), nil
 }
 
 func IsBinaryFormat(fileType EncodingType) bool {

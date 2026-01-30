@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/apache/arrow/go/v16/arrow"
 	"github.com/apache/arrow/go/v16/arrow/array"
 	"github.com/apache/arrow/go/v16/arrow/memory"
@@ -12,7 +14,6 @@ import (
 	"github.com/apache/arrow/go/v16/parquet/file"
 	"github.com/apache/arrow/go/v16/parquet/pqarrow"
 	"github.com/goccy/go-json"
-	"reflect"
 )
 
 type Codec struct{}
@@ -120,7 +121,7 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 		numRows := record.NumRows()
 		numCols := record.NumCols()
 
-		for i := int64(0); i < numRows; i++ {
+		for i := range numRows {
 			rowMap := make(map[string]any)
 			for j := 0; j < int(numCols); j++ {
 				field := schema.Field(j)
