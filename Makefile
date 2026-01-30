@@ -7,7 +7,7 @@ all: build
 build:
 	go build -o bin/$(BINARY) $(SRC)
 
-test:
+test: build
 	./tests/test.sh
 	go test ./... -v -cover
 
