@@ -3,11 +3,12 @@ package gron
 import (
 	"bytes"
 	"fmt"
-	"github.com/JFryy/qq/codec/util"
-	"github.com/goccy/go-json"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/JFryy/qq/codec/util"
+	"github.com/goccy/go-json"
 )
 
 type Codec struct{}
@@ -47,7 +48,7 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 	}
 
 	vv := reflect.ValueOf(v)
-	if vv.Kind() != reflect.Ptr || vv.IsNil() {
+	if vv.Kind() != reflect.Pointer || vv.IsNil() {
 		return fmt.Errorf("provided value must be a non-nil pointer")
 	}
 	if isArray && len(arrayData) > 0 {
@@ -78,7 +79,7 @@ func (c *Codec) traverseJSON(prefix string, v any, buf *bytes.Buffer) {
 			c.traverseJSON(fmt.Sprintf("%s[%d]", prefix, i), rv.Index(i).Interface(), buf)
 		}
 	default:
-		buf.WriteString(fmt.Sprintf("%s = %s;\n", prefix, formatJSONValue(v)))
+		fmt.Fprintf(buf, "%s = %s;\n", prefix, formatJSONValue(v))
 	}
 }
 

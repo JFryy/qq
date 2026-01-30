@@ -2,9 +2,11 @@ package codec
 
 import (
 	"fmt"
-	"github.com/goccy/go-json"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/goccy/go-json"
 )
 
 func TestGetEncodingType(t *testing.T) {
@@ -107,5 +109,162 @@ func TestUnmarshal(t *testing.T) {
 			fmt.Printf("got: %s\n", string(actualJSON))
 			t.Errorf("%s: expected %v, got %v", tt.encodingType, tt.expected, data)
 		}
+	}
+}
+
+func TestPrettyFormatRawOutput(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		fileType EncodingType
+		expected string
+	}{
+		{
+			name:     "string with tab escape sequence",
+			input:    `"string_1\tsecond string"`,
+			fileType: JSON,
+			expected: "string_1\tsecond string", // actual tab character
+		},
+		{
+			name:     "string with newline escape sequence",
+			input:    `"line1\nline2"`,
+			fileType: JSON,
+			expected: "line1\nline2", // actual newline
+		},
+		{
+			name:     "string with backslash",
+			input:    `"path\\to\\file"`,
+			fileType: JSON,
+			expected: "path\\to\\file", // actual backslashes
+		},
+		{
+			name:     "string with quotes",
+			input:    `"say \"hello\""`,
+			fileType: JSON,
+			expected: `say "hello"`, // actual quotes
+		},
+		{
+			name:     "simple string",
+			input:    `"hello"`,
+			fileType: JSON,
+			expected: "hello",
+		},
+		{
+			name:     "number should stay unchanged",
+			input:    `42`,
+			fileType: JSON,
+			expected: "42",
+		},
+		{
+			name:     "boolean should stay unchanged",
+			input:    `true`,
+			fileType: JSON,
+			expected: "true",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := PrettyFormat(tt.input, tt.fileType, true, true)
+			if err != nil {
+				t.Fatalf("PrettyFormat failed: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestPrettyFormatRawOutputMapAndArray(t *testing.T) {
+	// Maps and arrays should not be stripped of quotes in raw mode
+	tests := []struct {
+		name     string
+		input    string
+		fileType EncodingType
+	}{
+		{
+			name:     "object",
+			input:    `{"key": "value"}`,
+			fileType: JSON,
+		},
+		{
+			name:     "array",
+			input:    `["a", "b", "c"]`,
+			fileType: JSON,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := PrettyFormat(tt.input, tt.fileType, true, true)
+			if err != nil {
+				t.Fatalf("PrettyFormat failed: %v", err)
+			}
+			// Result should be unchanged (not stripped)
+			if result != tt.input {
+				t.Errorf("expected %q to remain unchanged, got %q", tt.input, result)
+			}
+		})
+	}
+}
+
+func TestPrettyFormatMonochrome(t *testing.T) {
+	input := `{"key": "value", "number": 42}`
+
+	result, err := PrettyFormat(input, JSON, false, true)
+	if err != nil {
+		t.Fatalf("PrettyFormat failed: %v", err)
+	}
+
+	// Monochrome output should not contain ANSI escape codes
+	if strings.Contains(result, "\033[") || strings.Contains(result, "\x1b[") {
+		t.Errorf("Monochrome output should not contain ANSI escape codes, got: %q", result)
+	}
+}
+
+func TestPrettyFormatWithColors(t *testing.T) {
+	input := `{"key": "value", "number": 42}`
+
+	result, err := PrettyFormat(input, JSON, false, false)
+	if err != nil {
+		t.Fatalf("PrettyFormat failed: %v", err)
+	}
+
+	// Since we're not in a TTY during tests, colors should be disabled
+	// and output should be plain
+	if strings.Contains(result, "\033[") || strings.Contains(result, "\x1b[") {
+		// If colors are present, that's actually OK - it means TTY detection
+		// thinks we're in a terminal
+		t.Logf("Colors detected in output (TTY might be detected)")
+	}
+
+	// Result should contain the input data
+	if !strings.Contains(result, "key") || !strings.Contains(result, "value") {
+		t.Errorf("Output should contain the input data")
+	}
+}
+
+func TestIsBinaryFormat(t *testing.T) {
+	tests := []struct {
+		format   EncodingType
+		expected bool
+	}{
+		{PARQUET, true},
+		{MSGPACK, true},
+		{MPK, true},
+		{JSON, false},
+		{YAML, false},
+		{XML, false},
+		{CSV, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.format.String(), func(t *testing.T) {
+			result := IsBinaryFormat(tt.format)
+			if result != tt.expected {
+				t.Errorf("IsBinaryFormat(%v) = %v, expected %v", tt.format, result, tt.expected)
+			}
+		})
 	}
 }

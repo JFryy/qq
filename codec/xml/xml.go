@@ -33,7 +33,7 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 
 	// reflection of values required for type assertions on interface
 	rv := reflect.ValueOf(v)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+	if rv.Kind() != reflect.Pointer || rv.IsNil() {
 		return fmt.Errorf("provided value must be a non-nil pointer")
 	}
 	rv.Elem().Set(reflect.ValueOf(parsedData))

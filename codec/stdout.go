@@ -18,13 +18,17 @@ func PrettyFormat(s string, fileType EncodingType, raw bool, monochrome bool) (s
 		if err != nil {
 			return "", err
 		}
-		switch v.(type) {
+		switch val := v.(type) {
 		case map[string]any:
 			break
 		case []any:
 			break
+		case string:
+			// For strings, return directly (escapes already decoded)
+			return val, nil
 		default:
-			return v.(string), nil
+			// For numbers, booleans, null - convert to string representation
+			return fmt.Sprintf("%v", val), nil
 		}
 	}
 

@@ -4,26 +4,22 @@ DESTDIR = ~/.local/bin
 
 all: build
 
-
 build:
 	go build -o bin/$(BINARY) $(SRC)
 
-test: build
+test:
 	./tests/test.sh
-	go test ./codec
+	go test ./... -v -cover
 
 clean:
-	rm bin/$(BINARY)
+	rm -f bin/$(BINARY) qq_test_binary coverage.out coverage.html
+	go clean -testcache
 
-install: test
+install: build test
 	mkdir -p $(DESTDIR)
 	cp bin/$(BINARY) $(DESTDIR)
-
-perf: build
-	time "./tests/test.sh"
 
 docker-push:
 	docker buildx build --platform linux/amd64,linux/arm64 . -t jfryy/qq:latest --push
 
-.PHONY: all test clean publish
-
+.PHONY: all build test clean install docker-push

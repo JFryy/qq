@@ -368,3 +368,159 @@ func TestYAMLRoundTrip(t *testing.T) {
 		t.Errorf("Null field changed: %v", result2["null"])
 	}
 }
+
+func TestMultiDocumentYAML(t *testing.T) {
+	multiDocYAML := `---
+name: document1
+value: 100
+---
+name: document2
+value: 200
+---
+name: document3
+value: 300`
+
+	codec := &Codec{}
+
+	// Test unmarshaling multi-document YAML
+	var result any
+	err := codec.Unmarshal([]byte(multiDocYAML), &result)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal multi-document YAML: %v", err)
+	}
+
+	// Should return an array of documents
+	docs, ok := result.([]any)
+	if !ok {
+		t.Fatalf("Expected []any, got %T", result)
+	}
+
+	if len(docs) != 3 {
+		t.Fatalf("Expected 3 documents, got %d", len(docs))
+	}
+
+	// Verify first document
+	doc1 := docs[0].(map[string]any)
+	if doc1["name"] != "document1" {
+		t.Errorf("Expected name 'document1', got %v", doc1["name"])
+	}
+	assertNumericEqual(t, doc1["value"], 100, "value")
+
+	// Verify second document
+	doc2 := docs[1].(map[string]any)
+	if doc2["name"] != "document2" {
+		t.Errorf("Expected name 'document2', got %v", doc2["name"])
+	}
+	assertNumericEqual(t, doc2["value"], 200, "value")
+}
+
+func TestSingleDocumentYAMLNotWrappedInArray(t *testing.T) {
+	singleDocYAML := `---
+name: single
+value: 123`
+
+	codec := &Codec{}
+
+	// Test unmarshaling single-document YAML
+	var result any
+	err := codec.Unmarshal([]byte(singleDocYAML), &result)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal single-document YAML: %v", err)
+	}
+
+	// Should return a map, NOT an array
+	doc, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("Expected map[string]any, got %T", result)
+	}
+
+	if doc["name"] != "single" {
+		t.Errorf("Expected name 'single', got %v", doc["name"])
+	}
+	assertNumericEqual(t, doc["value"], 123, "value")
+}
+
+func TestMultiDocumentYAMLTypeNormalization(t *testing.T) {
+	// Test that uint64 types from YAML are normalized to int
+	multiDocYAML := `---
+id: 1
+count: 100
+---
+id: 2
+count: 200`
+
+	codec := &Codec{}
+
+	var result any
+	err := codec.Unmarshal([]byte(multiDocYAML), &result)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	docs := result.([]any)
+	doc1 := docs[0].(map[string]any)
+
+	// Verify types are normalized (should be int, not uint64)
+	switch doc1["id"].(type) {
+	case int, int64, float64:
+		// Good - normalized type
+	case uint, uint64:
+		t.Errorf("Expected normalized int type, got uint type: %T", doc1["id"])
+	default:
+		t.Errorf("Unexpected type for id: %T", doc1["id"])
+	}
+}
+
+func TestYAMLWithoutDelimiter(t *testing.T) {
+	// YAML without --- delimiter should work
+	yamlData := `name: test
+value: 42
+active: true`
+
+	codec := &Codec{}
+
+	var result any
+	err := codec.Unmarshal([]byte(yamlData), &result)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal YAML without delimiter: %v", err)
+	}
+
+	doc := result.(map[string]any)
+	if doc["name"] != "test" {
+		t.Errorf("Expected name 'test', got %v", doc["name"])
+	}
+	assertNumericEqual(t, doc["value"], 42, "value")
+	if doc["active"] != true {
+		t.Errorf("Expected active true, got %v", doc["active"])
+	}
+}
+
+func TestEmptyDocuments(t *testing.T) {
+	// Test handling of empty documents
+	multiDocYAML := `---
+name: doc1
+---
+---
+name: doc2`
+
+	codec := &Codec{}
+
+	var result any
+	err := codec.Unmarshal([]byte(multiDocYAML), &result)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	// Result should be an array if multiple documents
+	if docs, ok := result.([]any); ok {
+		// Should handle empty document (might be nil or empty map)
+		if len(docs) < 2 {
+			t.Errorf("Expected at least 2 documents, got %d", len(docs))
+		}
+	} else {
+		// Or might be a single map if empty docs are skipped
+		if _, ok := result.(map[string]any); !ok {
+			t.Errorf("Expected array or map, got %T", result)
+		}
+	}
+}

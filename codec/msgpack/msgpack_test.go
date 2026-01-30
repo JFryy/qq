@@ -9,12 +9,12 @@ func TestCodec_Marshal(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		input   interface{}
+		input   any
 		wantErr bool
 	}{
 		{
 			name: "simple map",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"name": "test",
 				"age":  30,
 			},
@@ -22,7 +22,7 @@ func TestCodec_Marshal(t *testing.T) {
 		},
 		{
 			name: "array",
-			input: []interface{}{
+			input: []any{
 				"item1",
 				"item2",
 				42,
@@ -54,7 +54,7 @@ func TestCodec_Unmarshal(t *testing.T) {
 	codec := &Codec{}
 
 	// Test data
-	testData := map[string]interface{}{
+	testData := map[string]any{
 		"name":   "test",
 		"age":    30,
 		"active": true,
@@ -67,7 +67,7 @@ func TestCodec_Unmarshal(t *testing.T) {
 	}
 
 	// Test unmarshal
-	var result interface{}
+	var result any
 	err = codec.Unmarshal(marshaled, &result)
 	if err != nil {
 		t.Errorf("Codec.Unmarshal() error = %v", err)
@@ -75,7 +75,7 @@ func TestCodec_Unmarshal(t *testing.T) {
 	}
 
 	// Convert to map for comparison
-	resultMap, ok := result.(map[string]interface{})
+	resultMap, ok := result.(map[string]any)
 	if !ok {
 		t.Errorf("Codec.Unmarshal() result is not a map")
 		return
@@ -109,24 +109,24 @@ func TestCodec_RoundTrip(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		input interface{}
+		input any
 	}{
 		{
 			name: "complex map",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"string": "hello",
 				"number": 42,
 				"float":  3.14,
 				"bool":   true,
-				"array":  []interface{}{"a", "b", "c"},
-				"nested": map[string]interface{}{
+				"array":  []any{"a", "b", "c"},
+				"nested": map[string]any{
 					"key": "value",
 				},
 			},
 		},
 		{
 			name:  "array",
-			input: []interface{}{1, 2, 3, "test", true},
+			input: []any{1, 2, 3, "test", true},
 		},
 		{
 			name:  "string",
@@ -151,7 +151,7 @@ func TestCodec_RoundTrip(t *testing.T) {
 			}
 
 			// Unmarshal
-			var result interface{}
+			var result any
 			err = codec.Unmarshal(marshaled, &result)
 			if err != nil {
 				t.Fatalf("Unmarshal failed: %v", err)

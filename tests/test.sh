@@ -116,12 +116,110 @@ run_test() {
     fi
 }
 
+# Test gojq functionality
+test_gojq_functionality() {
+    print "yellow" "Testing gojq functionality..."
+
+    # Basic queries
+    run_test "identity query" \
+        "echo '{\"a\":1}' | bin/qq '.'"
+
+    run_test "key access" \
+        "echo '{\"name\":\"test\"}' | bin/qq '.name' | grep -q 'test'"
+
+    run_test "nested key access" \
+        "echo '{\"a\":{\"b\":\"value\"}}' | bin/qq '.a.b' | grep -q 'value'"
+
+    run_test "array index" \
+        "echo '[1,2,3]' | bin/qq '.[1]' | grep -q '^2$'"
+
+    run_test "array slice" \
+        "echo '[1,2,3,4,5]' | bin/qq '.[1:3]' | jq -e '. == [2,3]'"
+
+    # Array operations
+    run_test "array length" \
+        "echo '[1,2,3]' | bin/qq 'length' | grep -q '^3$'"
+
+    run_test "map operation" \
+        "echo '[1,2,3]' | bin/qq 'map(. * 2)' | jq -e '. == [2,4,6]'"
+
+    run_test "select filter" \
+        "echo '[{\"a\":1},{\"a\":2},{\"a\":3}]' | bin/qq '[.[] | select(.a > 1)]' | jq -e 'length == 2'"
+
+    run_test "array iteration" \
+        "echo '[1,2,3]' | bin/qq '.[]' | wc -l | grep -q '3'"
+
+    # Object operations
+    run_test "keys function" \
+        "echo '{\"b\":2,\"a\":1}' | bin/qq 'keys' | jq -e '. == [\"a\",\"b\"]'"
+
+    run_test "values function" \
+        "echo '{\"a\":1,\"b\":2}' | bin/qq '[.[] ]' | jq -e 'length == 2'"
+
+    run_test "has function" \
+        "echo '{\"a\":1}' | bin/qq 'has(\"a\")' | grep -q 'true'"
+
+    # Pipes and composition
+    run_test "pipe operations" \
+        "echo '[1,2,3,4,5]' | bin/qq 'map(. * 2) | map(. + 1)' | jq -e '.[0] == 3'"
+
+    run_test "multiple filters" \
+        "echo '[{\"a\":1},{\"a\":2},{\"a\":3}]' | bin/qq '[.[] | select(.a > 1) | .a]' | jq -e '. == [2,3]'"
+
+    # String operations
+    run_test "string concatenation" \
+        "echo '{\"a\":\"hello\",\"b\":\"world\"}' | bin/qq '.a + \" \" + .b' | grep -q 'hello world'"
+
+    run_test "string split" \
+        "echo '\"a,b,c\"' | bin/qq 'split(\",\")' | jq -e 'length == 3'"
+
+    # Math operations
+    run_test "addition" \
+        "echo '{\"a\":5,\"b\":3}' | bin/qq '.a + .b' | grep -q '^8$'"
+
+    run_test "arithmetic expression" \
+        "echo '[1,2,3,4,5]' | bin/qq 'map(. * 2) | add' | grep -q '^30$'"
+
+    # Type operations
+    run_test "type function" \
+        "echo '42' | bin/qq 'type' | grep -q 'number'"
+
+    run_test "type check string" \
+        "echo '\"test\"' | bin/qq 'type' | grep -q 'string'"
+
+    # Conditionals
+    run_test "if-then-else" \
+        "echo '5' | bin/qq 'if . > 3 then \"big\" else \"small\" end' | grep -q 'big'"
+
+    # Null handling
+    run_test "null coalescing" \
+        "echo '{\"a\":null}' | bin/qq '.a // \"default\"' | grep -q 'default'"
+
+    # Sorting
+    run_test "sort array" \
+        "echo '[3,1,2]' | bin/qq 'sort' | jq -e '. == [1,2,3]'"
+
+    run_test "sort reverse" \
+        "echo '[1,2,3]' | bin/qq 'sort | reverse' | jq -e '. == [3,2,1]'"
+
+    # Group by
+    run_test "group_by operation" \
+        "echo '[{\"k\":\"a\",\"v\":1},{\"k\":\"b\",\"v\":2},{\"k\":\"a\",\"v\":3}]' | bin/qq 'group_by(.k) | length' | grep -q '^2$'"
+
+    # Min/Max
+    run_test "max function" \
+        "echo '[1,5,3,2,4]' | bin/qq 'max' | grep -q '^5$'"
+
+    run_test "min function" \
+        "echo '[1,5,3,2,4]' | bin/qq 'min' | grep -q '^1$'"
+}
+
 # Progress summary
 print_summary() {
     echo
     print "blue" "=== Test Summary ==="
     print "green" "Passed: $passed_tests"
-    print "yellow" "Skipped: $skipped_tests" 
+    print "yellow" "Skipped: $skipped_tests"
     print "red" "Failed: $failed_tests"
     print "blue" "Total: $total_tests"
     echo
@@ -131,9 +229,13 @@ print_summary() {
 main() {
     print "blue" "Starting qq codec tests..."
     echo
-    
+
     validate_prerequisites
-    
+
+    # Run gojq functionality tests
+    test_gojq_functionality
+    echo
+
     # Get test extensions, excluding shell scripts and ini files
     local extensions
     if ! extensions=$(find tests -maxdepth 1 -type f ! -name "*.sh" ! -name "*.ini" 2>/dev/null); then
