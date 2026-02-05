@@ -16,10 +16,10 @@ func TestGetEncodingType(t *testing.T) {
 	}{
 		{"json", JSON},
 		{"yaml", YAML},
-		{"yml", YML},
+		{"yml", YAML},  // yml maps to YAML
 		{"toml", TOML},
 		{"hcl", HCL},
-		{"tf", TF},
+		{"tf", HCL},    // tf maps to HCL
 		{"csv", CSV},
 		{"xml", XML},
 		{"ini", INI},
@@ -47,7 +47,7 @@ func TestMarshal(t *testing.T) {
 	tests := []struct {
 		encodingType EncodingType
 	}{
-		{JSON}, {YAML}, {YML}, {TOML}, {HCL}, {TF}, {CSV}, {XML}, {INI}, {GRON}, {HTML},
+		{JSON}, {YAML}, {TOML}, {HCL}, {CSV}, {XML}, {INI}, {GRON}, {HTML},
 	}
 
 	for _, tt := range tests {
@@ -86,7 +86,7 @@ func TestUnmarshal(t *testing.T) {
 		{[]byte(yamlData), YAML, map[string]any{"key": "value"}},
 		{[]byte(tomlData), TOML, map[string]any{"key": "value"}},
 		{[]byte(gronData), GRON, map[string]any{"key": "value"}},
-		{[]byte(tfData), TF, map[string]any{"key": "value"}},
+		{[]byte(tfData), HCL, map[string]any{"key": "value"}},
 		//		{[]byte(htmlData), HTML, map[string]any{"html": map[string]any{"body": map[string]any{"key": "value"}}}},
 		//		{[]byte(csvData), CSV, []map[string]any{
 		//			{"key1": "value1", "key2": "value2"},
@@ -252,7 +252,6 @@ func TestIsBinaryFormat(t *testing.T) {
 	}{
 		{PARQUET, true},
 		{MSGPACK, true},
-		{MPK, true},
 		{JSON, false},
 		{YAML, false},
 		{XML, false},
