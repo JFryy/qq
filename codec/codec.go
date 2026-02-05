@@ -8,6 +8,7 @@ import (
 	"github.com/goccy/go-json"
 
 	// dedicated codec packages and wrappers where appropriate
+	"github.com/JFryy/qq/codec/base64"
 	"github.com/JFryy/qq/codec/csv"
 	"github.com/JFryy/qq/codec/env"
 	"github.com/JFryy/qq/codec/gron"
@@ -15,10 +16,14 @@ import (
 	"github.com/JFryy/qq/codec/html"
 	"github.com/JFryy/qq/codec/ini"
 	qqjson "github.com/JFryy/qq/codec/json"
+	"github.com/JFryy/qq/codec/jsonc"
+	"github.com/JFryy/qq/codec/jsonl"
 	"github.com/JFryy/qq/codec/line"
 	"github.com/JFryy/qq/codec/msgpack"
 	"github.com/JFryy/qq/codec/parquet"
+	"github.com/JFryy/qq/codec/properties"
 	proto "github.com/JFryy/qq/codec/proto"
+	"github.com/JFryy/qq/codec/tsv"
 	"github.com/JFryy/qq/codec/xml"
 	"github.com/JFryy/qq/codec/yaml"
 )
@@ -34,6 +39,7 @@ const (
 	HCL
 	TF
 	CSV
+	TSV
 	XML
 	INI
 	GRON
@@ -45,10 +51,17 @@ const (
 	PARQUET
 	MSGPACK
 	MPK
+	PROPERTIES
+	JSONL
+	NDJSON
+	JSONLINES
+	JSONC
+	BASE64
+	B64
 )
 
 func (e EncodingType) String() string {
-	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "xml", "ini", "gron", "html", "line", "txt", "proto", "env", "parquet", "msgpack", "mpk"}[e]
+	return [...]string{"json", "yaml", "yml", "toml", "hcl", "tf", "csv", "tsv", "xml", "ini", "gron", "html", "line", "txt", "proto", "env", "parquet", "msgpack", "mpk", "properties", "jsonl", "ndjson", "jsonlines", "jsonc", "base64", "b64"}[e]
 }
 
 type Encoding struct {
@@ -68,19 +81,24 @@ func GetEncodingType(fileType string) (EncodingType, error) {
 }
 
 var (
-	htm          = html.Codec{}
-	jsn          = qqjson.Codec{} // wrapper for go-json marshal
-	grn          = gron.Codec{}
-	hcltf        = hcl.Codec{}
-	xmll         = xml.Codec{}
-	inii         = ini.Codec{}
-	lines        = line.Codec{}
-	sv           = csv.Codec{}
-	pb           = proto.Codec{}
-	yml          = yaml.Codec{}
-	envCodec     = env.Codec{}
-	parquetCodec = parquet.Codec{}
-	msgpackCodec = msgpack.Codec{}
+	htm             = html.Codec{}
+	jsn             = qqjson.Codec{} // wrapper for go-json marshal
+	grn             = gron.Codec{}
+	hcltf           = hcl.Codec{}
+	xmll            = xml.Codec{}
+	inii            = ini.Codec{}
+	lines           = line.Codec{}
+	sv              = csv.Codec{}
+	tsvCodec        = tsv.Codec{}
+	pb              = proto.Codec{}
+	yml             = yaml.Codec{}
+	envCodec        = env.Codec{}
+	parquetCodec    = parquet.Codec{}
+	msgpackCodec    = msgpack.Codec{}
+	propertiesCodec = properties.Codec{}
+	jsonlCodec      = jsonl.Codec{}
+	jsoncCodec      = jsonc.Codec{}
+	base64Codec     = base64.Codec{}
 )
 var SupportedFileTypes = []Encoding{
 	{JSON, json.Unmarshal, jsn.Marshal},
@@ -90,6 +108,7 @@ var SupportedFileTypes = []Encoding{
 	{HCL, hcltf.Unmarshal, hcltf.Marshal},
 	{TF, hcltf.Unmarshal, hcltf.Marshal},
 	{CSV, sv.Unmarshal, sv.Marshal},
+	{TSV, tsvCodec.Unmarshal, tsvCodec.Marshal},
 	{XML, xmll.Unmarshal, xmll.Marshal},
 	{INI, inii.Unmarshal, inii.Marshal},
 	{GRON, grn.Unmarshal, grn.Marshal},
@@ -101,6 +120,13 @@ var SupportedFileTypes = []Encoding{
 	{PARQUET, parquetCodec.Unmarshal, parquetCodec.Marshal},
 	{MSGPACK, msgpackCodec.Unmarshal, msgpackCodec.Marshal},
 	{MPK, msgpackCodec.Unmarshal, msgpackCodec.Marshal},
+	{PROPERTIES, propertiesCodec.Unmarshal, propertiesCodec.Marshal},
+	{JSONL, jsonlCodec.Unmarshal, jsonlCodec.Marshal},
+	{NDJSON, jsonlCodec.Unmarshal, jsonlCodec.Marshal},
+	{JSONLINES, jsonlCodec.Unmarshal, jsonlCodec.Marshal},
+	{JSONC, jsoncCodec.Unmarshal, jsoncCodec.Marshal},
+	{BASE64, base64Codec.Unmarshal, base64Codec.Marshal},
+	{B64, base64Codec.Unmarshal, base64Codec.Marshal},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data any) error {

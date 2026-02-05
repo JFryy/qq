@@ -106,23 +106,11 @@ qq large-file.json -o yaml > /dev/null 2>&1  2.72s user 0.16s system 190% cpu 1.
 
 ## Supported Formats
 
-| Format      | Input          | Output         |
-|-------------|----------------|----------------|
-| JSON        | ✅ Supported   | ✅ Supported   |
-| YAML        | ✅ Supported   | ✅ Supported   |
-| TOML        | ✅ Supported   | ✅ Supported   |
-| XML         | ✅ Supported   | ✅ Supported   |
-| INI         | ✅ Supported   | ✅ Supported   |
-| HCL         | ✅ Supported   | ✅ Supported   |
-| TF          | ✅ Supported   | ✅ Supported   |
-| GRON        | ✅ Supported   | ✅ Supported   |
-| CSV         | ✅ Supported   | ✅ Supported |
-| Proto (.proto)    | ✅ Supported | ❌ Not Supported |
-| HTML        | ✅ Supported   | ✅ Supported |
-| TXT (newline)| ✅ Supported  | ❌ Not Supported |
-| ENV         | ✅ Supported | ❌ Not Supported |
-| PARQUET     | ✅ Supported | ✅ Supported |
-| MSGPACK     | ✅ Supported | ✅ Supported |
+```
+JSON (I/O), JSONL (I/O), JSONC (I/O), YAML (I/O), TOML (I/O), XML (I/O), INI (I/O),
+HCL (I/O), TF (I/O), GRON (I/O), CSV (I/O), TSV (I/O), PROPERTIES (I/O), HTML (I/O),
+PARQUET (I/O), MSGPACK (I/O), BASE64 (I/O), Proto (I), TXT (I), ENV (I)
+```
 
 ## Caveats
 
