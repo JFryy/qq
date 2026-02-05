@@ -7,7 +7,10 @@
 [![Latest Release](https://img.shields.io/github/v/release/JFryy/qq)](https://github.com/JFryy/qq/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/jfryy/qq)](https://hub.docker.com/r/jfryy/qq)
 
-`qq` is an interoperable configuration format transcoder with `jq` query syntax powered by `gojq`. `qq` is multi modal, and can be used as a replacement for `jq` or be interacted with via a REPL with autocomplete and realtime rendering preview for building queries.
+`qq` is an interoperable configuration format transcoder with `jq` query syntax powered by `gojq`. `qq` is multi modal, and can be used as a replacement for `jq` or be interacted with via 
+a REPL with autocomplete and realtime rendering preview for building queries.
+
+`qq` is designed to support input output operations on a large variety of structured data codecs with the power of jq, please refer to the below for supported formats/extensions.
 
 ## Usage
 
@@ -73,49 +76,14 @@ echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 * Provide an interactive mode for building queries with autocomplete and realtime rendering preview.
 * `qq` is broad, but performant encodings are still a priority, execution is quite fast despite covering a broad range of codecs. `qq` performs comparitively with dedicated tools for a given format.
 
-### Rough Benchmarks
 
-Note: these improvements generally only occur on large files and are miniscule otherwise. qq may be slower than dedicated tools for a given format, but it is pretty fast for a broad range of formats.
-
-```shell
-$ du -h large-file.json
-25M     large-file.json
-```
-
-```shell
-# gron large file bench
-
-$ time gron large-file.json --no-sort | rg -v '[1-4]' | gron --ungron --no-sort > /dev/null 2>&1
-gron large-file.json --no-sort  2.58s user 0.48s system 153% cpu 1.990 total
-rg -v '[1-4]'  0.18s user 0.24s system 21% cpu 1.991 total
-gron --ungron --no-sort > /dev/null 2>&1  7.68s user 1.15s system 197% cpu 4.475 total
-
-$ time qq -o gron large-file.json | rg -v '[1-4]' | qq -i gron > /dev/null 2>&1
-qq -o gron large-file.json  0.81s user 0.09s system 128% cpu 0.706 total
-rg -v '[1-4]'  0.02s user 0.01s system 5% cpu 0.706 total
-qq -i gron > /dev/null 2>&1  0.07s user 0.01s system 11% cpu 0.741 total
-
-# yq large file bench
-
-$ time yq large-file.json -M -o yaml > /dev/null 2>&1
-yq large-file.json -M -o yaml > /dev/null 2>&1  4.02s user 0.31s system 208% cpu 2.081 total
-
-$ time qq large-file.json -o yaml > /dev/null 2>&1
-qq large-file.json -o yaml > /dev/null 2>&1  2.72s user 0.16s system 190% cpu 1.519 total
-```
-
-## Supported Formats
+## Supported Extensions/Formats
 
 ```
-JSON (I/O), JSONL (I/O), JSONC (I/O), YAML (I/O), TOML (I/O), XML (I/O), INI (I/O),
-HCL (I/O), TF (I/O), GRON (I/O), CSV (I/O), TSV (I/O), PROPERTIES (I/O), HTML (I/O),
-PARQUET (I/O), MSGPACK (I/O), BASE64 (I/O), Proto (I), TXT (I), ENV (I)
+.json, .jsonl, .ndjson, .jsonlines, .jsonc, .yaml, .yml, .toml, .xml, .ini, .hcl, .tf,
+.gron, .csv, .tsv, .properties, .html, .parquet, .msgpack, .mpk, .base64, .b64,
+.proto (input only), .txt (input only), .env (input only)
 ```
-
-## Caveats
-
-1. `qq` is not a full `jq` replacement, some flags may or may not be supported. 
-3. `qq` is under active development, more codecs in the future may be supported along with improvements to `interactive mode`.
 
 ## Contributions
 
