@@ -19,11 +19,7 @@ func CreateRootCmd() *cobra.Command {
 	var version bool
 	var help bool
 	var monochrome bool
-	var encodings string
-	for _, t := range codec.SupportedFileTypes {
-		encodings += t.Ext.String() + ", "
-	}
-	encodings = strings.TrimSuffix(encodings, ", ")
+	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
 	v := "v0.3.3"
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
@@ -176,13 +172,13 @@ func isFile(path string) bool {
 	return !info.IsDir()
 }
 
-func inferFileType(fName string) codec.EncodingType {
-	ext := strings.ToLower(filepath.Ext(fName))
+var extensionMap = codec.GetExtensionMap()
 
-	for _, t := range codec.SupportedFileTypes {
-		if ext == "."+t.Ext.String() {
-			return t.Ext
-		}
+func inferFileType(fName string) codec.EncodingType {
+	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(fName)), ".")
+
+	if encType, ok := extensionMap[ext]; ok {
+		return encType
 	}
 	return codec.JSON
 }

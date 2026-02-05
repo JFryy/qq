@@ -38,7 +38,7 @@ func PrettyFormat(s string, fileType EncodingType, raw bool, monochrome bool) (s
 
 	var lexer chroma.Lexer
 	// this a workaround for json lexer while we don't have a marshal function dedicated for these formats.
-	if fileType == CSV || fileType == HTML || fileType == LINE || fileType == TXT || fileType == ENV || fileType == PARQUET || fileType == MSGPACK || fileType == MPK {
+	if fileType == CSV || fileType == HTML || fileType == LINE || fileType == TXT || fileType == ENV || fileType == PARQUET || fileType == MSGPACK {
 		lexer = lexers.Get("json")
 	} else {
 		lexer = lexers.Get(fileType.String())
