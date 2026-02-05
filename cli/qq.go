@@ -2,16 +2,17 @@ package cli
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/JFryy/qq/codec"
-	"github.com/JFryy/qq/internal/tui"
-	"github.com/itchyny/gojq"
-	"github.com/spf13/cobra"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/JFryy/qq/codec"
+	"github.com/JFryy/qq/internal/tui"
+	"github.com/goccy/go-json"
+	"github.com/itchyny/gojq"
+	"github.com/spf13/cobra"
 )
 
 func CreateRootCmd() *cobra.Command {

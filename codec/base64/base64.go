@@ -2,8 +2,9 @@ package base64
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"errors"
+
+	"github.com/goccy/go-json"
 )
 
 // Codec handles base64 encoding/decoding

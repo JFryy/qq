@@ -16,10 +16,10 @@ func TestGetEncodingType(t *testing.T) {
 	}{
 		{"json", JSON},
 		{"yaml", YAML},
-		{"yml", YAML},  // yml maps to YAML
+		{"yml", YAML}, // yml maps to YAML
 		{"toml", TOML},
 		{"hcl", HCL},
-		{"tf", HCL},    // tf maps to HCL
+		{"tf", HCL}, // tf maps to HCL
 		{"csv", CSV},
 		{"xml", XML},
 		{"ini", INI},

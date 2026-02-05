@@ -2,12 +2,13 @@ package properties
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"unicode"
+
+	"github.com/goccy/go-json"
 )
 
 // Codec handles Java properties file parsing and marshaling

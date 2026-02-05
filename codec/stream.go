@@ -2,10 +2,11 @@ package codec
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 // StreamParser parses input in streaming mode, emitting path-value pairs via a channel
@@ -431,93 +432,6 @@ func parseStreamToChannel(decoder *json.Decoder, path []any, dataChan chan<- any
 		}
 
 		dataChan <- []any{pathCopy, t}
-		return nil
-	}
-}
-
-func parseStream(decoder *json.Decoder, path []any, result *[]any) error {
-	token, err := decoder.Token()
-	if err != nil {
-		return err
-	}
-
-	switch t := token.(type) {
-	case json.Delim:
-		switch t {
-		case '[':
-			// Start of array
-			index := 0
-			lastIndex := -1
-			for decoder.More() {
-				newPath := append(append([]any{}, path...), index)
-				if err := parseStream(decoder, newPath, result); err != nil {
-					return err
-				}
-				lastIndex = index
-				index++
-			}
-			// Consume the closing ']'
-			if _, err := decoder.Token(); err != nil {
-				return err
-			}
-			// Emit [path + lastIndex] to indicate array end (jq behavior)
-			if lastIndex >= 0 {
-				closePath := append(append([]any{}, path...), lastIndex)
-				*result = append(*result, []any{closePath})
-			}
-			return nil
-
-		case '{':
-			// Start of object
-			var lastKey string
-			hasKeys := false
-			for decoder.More() {
-				// Get the key
-				keyToken, err := decoder.Token()
-				if err != nil {
-					return err
-				}
-				key, ok := keyToken.(string)
-				if !ok {
-					return fmt.Errorf("expected string key, got %T", keyToken)
-				}
-				lastKey = key
-				hasKeys = true
-				newPath := append(append([]any{}, path...), key)
-				if err := parseStream(decoder, newPath, result); err != nil {
-					return err
-				}
-			}
-			// Consume the closing '}'
-			if _, err := decoder.Token(); err != nil {
-				return err
-			}
-			// Emit [path + lastKey] to indicate object end (jq behavior)
-			if hasKeys {
-				closePath := append(append([]any{}, path...), lastKey)
-				*result = append(*result, []any{closePath})
-			}
-			return nil
-
-		default:
-			return fmt.Errorf("unexpected delimiter: %v", t)
-		}
-
-	default:
-		// Leaf value - emit [path, value]
-		pathCopy := make([]any, len(path))
-		copy(pathCopy, path)
-
-		// Convert json.Number to appropriate type
-		if num, ok := t.(json.Number); ok {
-			if intVal, err := num.Int64(); err == nil {
-				t = float64(intVal)
-			} else if floatVal, err := num.Float64(); err == nil {
-				t = floatVal
-			}
-		}
-
-		*result = append(*result, []any{pathCopy, t})
 		return nil
 	}
 }

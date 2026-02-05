@@ -1,9 +1,10 @@
 package json
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/goccy/go-json"
 )
 
 func TestJSONMarshalBasicTypes(t *testing.T) {

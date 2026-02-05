@@ -3,10 +3,11 @@ package jsonl
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 // Codec handles JSON Lines (newline-delimited JSON) format

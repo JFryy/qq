@@ -1,11 +1,12 @@
 package env
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 // Codec handles environment file parsing and marshaling

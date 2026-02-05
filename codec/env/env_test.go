@@ -1,8 +1,9 @@
 package env
 
 import (
-	"encoding/json"
 	"testing"
+
+	"github.com/goccy/go-json"
 )
 
 func TestBasicEnvParsing(t *testing.T) {

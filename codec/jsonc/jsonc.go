@@ -1,9 +1,10 @@
 package jsonc
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 // Codec handles JSON with Comments (JSONC) format

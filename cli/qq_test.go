@@ -17,12 +17,12 @@ func TestInferFileType(t *testing.T) {
 	}{
 		{"test.json", codec.JSON},
 		{"test.yaml", codec.YAML},
-		{"test.yml", codec.YAML},  // yml maps to YAML
+		{"test.yml", codec.YAML}, // yml maps to YAML
 		{"test.toml", codec.TOML},
 		{"test.xml", codec.XML},
 		{"test.csv", codec.CSV},
 		{"test.hcl", codec.HCL},
-		{"test.tf", codec.HCL},    // tf maps to HCL
+		{"test.tf", codec.HCL}, // tf maps to HCL
 		{"test.ini", codec.INI},
 		{"test.unknown", codec.JSON}, // defaults to JSON
 		{"/path/to/file.json", codec.JSON},
