@@ -16,18 +16,13 @@ import (
 
 var (
 	// Enhanced color scheme
-	focusedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B9D")).Bold(true)
 	cursorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")).Background(lipgloss.Color("#FF6B9D")).Bold(true)
 	previewStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Background(lipgloss.Color("#2D2D2D")).Italic(true).Padding(0, 1)
 	outputStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B"))
 	headerStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#8BE9FD")).Bold(true).Underline(true)
 	legendStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#6272A4")).Italic(true)
-	errorStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")).Background(lipgloss.Color("#44475A")).Bold(true).Padding(0, 1)
 	borderStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#44475A"))
 	textAreaStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#FF6B9D")).Padding(0, 1)
-	viewportStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#50FA7B")).Padding(1)
-	successStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B")).Bold(true)
-	warningStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#F1FA8C")).Bold(true)
 )
 
 type model struct {
@@ -126,10 +121,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		headerHeight := headerLines + textAreaLines + legendLines + previewLines
-		availableHeight := msg.Height - headerHeight
-		if availableHeight < 3 {
-			availableHeight = 3 // Minimum viewport height
-		}
+		availableHeight := max(msg.Height-headerHeight,
+			// Minimum viewport height
+			3)
 
 		m.viewport.Width = msg.Width
 		m.viewport.Height = availableHeight
@@ -166,22 +160,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.runJqFilter()
 				return m, nil
 			}
-			// Let the textarea handle the enter key for newlines - don't intercept it
-			break
 
 		case msg.String() == "up":
-			m.viewport.LineUp(1)
+			m.viewport.ScrollUp(1)
 			return m, nil
 
 		case msg.String() == "down":
-			m.viewport.LineDown(1)
+			m.viewport.ScrollDown(1)
 			return m, nil
 
 		case msg.String() == "pageup":
-			m.viewport.ViewUp()
+			m.viewport.PageUp()
 			return m, nil
 		case msg.String() == "pagedown":
-			m.viewport.ViewDown()
+			m.viewport.PageDown()
 			return m, nil
 
 		default:

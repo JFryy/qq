@@ -2,6 +2,7 @@ package codec
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -79,10 +80,8 @@ type Encoding struct {
 func GetEncodingType(fileType string) (EncodingType, error) {
 	fileType = strings.ToLower(fileType)
 	for encType, enc := range Codecs {
-		for _, ext := range enc.Extensions {
-			if fileType == ext {
-				return encType, nil
-			}
+		if slices.Contains(enc.Extensions, fileType) {
+			return encType, nil
 		}
 	}
 	return JSON, fmt.Errorf("unsupported file type: %v", fileType)

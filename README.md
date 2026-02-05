@@ -32,6 +32,15 @@ curl motherfuckingwebsite.com | bin/qq -i html '.html.body.ul.li[0]'
 
 # interactive query builder mode on target file
 qq . file.json --interactive
+
+# streaming mode - works with JSON, YAML, CSV and more
+qq --stream 'select(length == 2)' large.json
+
+# slurp mode - read multiple inputs into an array
+echo -e '{"id":1}\n{"id":2}' | qq -s 'map(.id)'
+
+# exit-status - use in conditionals
+echo '{"active":true}' | qq -e '.active' && echo "is active"
 ```
 
 ## Installation
@@ -74,6 +83,7 @@ echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 * Support a wide range of configuration formats and transform them interchangeably between each other.
 * Quick and comprehensive querying of configuration formats without needing a pipeline of dedicated tools.
 * Provide an interactive mode for building queries with autocomplete and realtime rendering preview.
+* Streaming mode (`--stream`) (identical to jq's `--stream`), plus extended support for JSONL, YAML, CSV, TSV, and line-delimited formats - all emit path-value pairs for memory-efficient processing of large files.
 * `qq` is broad, but performant encodings are still a priority, execution is quite fast despite covering a broad range of codecs. `qq` performs comparitively with dedicated tools for a given format.
 
 

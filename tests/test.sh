@@ -214,6 +214,132 @@ test_gojq_functionality() {
         "echo '[1,5,3,2,4]' | bin/qq 'min' | grep -q '^1$'"
 }
 
+# Test streaming functionality (jq-compatible streaming)
+test_streaming_functionality() {
+    print "yellow" "Testing streaming functionality..."
+
+    # Basic streaming with simple object
+    run_test "streaming simple object" \
+        "echo '{\"name\":\"test\",\"id\":1}' | bin/qq --stream | grep -q 'name'"
+
+    # Streaming with array
+    run_test "streaming array" \
+        "echo '[1,2,3]' | bin/qq --stream | grep -q '0'"
+
+    # Streaming with filter - select only path-value pairs (length == 2)
+    run_test "streaming with filter" \
+        "echo '{\"a\":1,\"b\":2}' | bin/qq --stream 'select(length == 2)' | grep -q '\"a\"'"
+
+    # Streaming with nested structure
+    run_test "streaming nested structure" \
+        "echo '{\"user\":{\"name\":\"Bob\"}}' | bin/qq --stream | grep -q 'user'"
+
+    # Streaming from file
+    local test_file="/tmp/qq_stream_test.json"
+    echo '{"test":123}' > "$test_file"
+    run_test "streaming from file" \
+        "bin/qq --stream '.' $test_file | grep -q 'test'"
+
+    # Streaming + interactive validation (should fail)
+    local exit_code=0
+    echo '{}' | bin/qq --stream --interactive &>/dev/null || exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        passed_tests=$((passed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "green" "  ✓ PASS: streaming + interactive correctly rejected"
+    else
+        failed_tests=$((failed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "red" "  ✗ FAIL: streaming + interactive should fail"
+    fi
+
+    # Cleanup
+    rm -f "$test_file"
+}
+
+# Test slurp functionality
+test_slurp_functionality() {
+    print "yellow" "Testing slurp functionality..."
+
+    # Slurp multiple JSON values
+    run_test "slurp multiple JSON values" \
+        "echo -e '{\"id\":1}\n{\"id\":2}\n{\"id\":3}' | bin/qq -s 'length' | grep -q '3'"
+
+    # Slurp with transformation
+    run_test "slurp with map" \
+        "echo -e '{\"id\":1}\n{\"id\":2}' | bin/qq -s 'map(.id) | add' | grep -q '3'"
+
+    # Slurp JSONL file
+    local test_file="/tmp/qq_slurp_test.jsonl"
+    echo -e '{"name":"Alice"}\n{"name":"Bob"}' > "$test_file"
+    run_test "slurp JSONL file" \
+        "bin/qq -s -i jsonl 'map(.name) | join(\", \")' $test_file | grep -q 'Alice, Bob'"
+
+    # Slurp + stream validation (should fail)
+    local exit_code=0
+    echo '{}' | bin/qq -s --stream &>/dev/null || exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        passed_tests=$((passed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "green" "  ✓ PASS: slurp + stream correctly rejected"
+    else
+        failed_tests=$((failed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "red" "  ✗ FAIL: slurp + stream should fail"
+    fi
+
+    # Cleanup
+    rm -f "$test_file"
+}
+
+# Test exit-status functionality
+test_exit_status_functionality() {
+    print "yellow" "Testing exit-status functionality..."
+
+    # Exit status with true value (should succeed)
+    local exit_code=0
+    echo '{"active":true}' | bin/qq -e '.active' > /dev/null 2>&1 || exit_code=$?
+    if [[ $exit_code -eq 0 ]]; then
+        passed_tests=$((passed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "green" "  ✓ PASS: exit-status returns 0 for true"
+    else
+        failed_tests=$((failed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "red" "  ✗ FAIL: exit-status should return 0 for true, got $exit_code"
+    fi
+
+    # Exit status with false value (should fail with 1)
+    exit_code=0
+    echo '{"active":false}' | bin/qq -e '.active' > /dev/null 2>&1 || exit_code=$?
+    if [[ $exit_code -eq 1 ]]; then
+        passed_tests=$((passed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "green" "  ✓ PASS: exit-status returns 1 for false"
+    else
+        failed_tests=$((failed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "red" "  ✗ FAIL: exit-status should return 1 for false, got $exit_code"
+    fi
+
+    # Exit status with no output (should fail with 4)
+    exit_code=0
+    echo '5' | bin/qq -e 'select(. > 10)' > /dev/null 2>&1 || exit_code=$?
+    if [[ $exit_code -eq 4 ]]; then
+        passed_tests=$((passed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "green" "  ✓ PASS: exit-status returns 4 for no output"
+    else
+        failed_tests=$((failed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "red" "  ✗ FAIL: exit-status should return 4 for no output, got $exit_code"
+    fi
+
+    # Exit status in conditional
+    run_test "exit-status in conditional" \
+        "echo '{\"ready\":true}' | bin/qq -e '.ready' && echo 'success' | grep -q 'success'"
+}
+
 # Progress summary
 print_summary() {
     echo
@@ -234,6 +360,18 @@ main() {
 
     # Run gojq functionality tests
     test_gojq_functionality
+    echo
+
+    # Run streaming functionality tests
+    test_streaming_functionality
+    echo
+
+    # Run slurp functionality tests
+    test_slurp_functionality
+    echo
+
+    # Run exit-status functionality tests
+    test_exit_status_functionality
     echo
 
     # Get test extensions, excluding shell scripts and ini files
