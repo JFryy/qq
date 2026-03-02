@@ -43,6 +43,37 @@ echo -e '{"id":1}\n{"id":2}' | qq -s 'map(.id)'
 echo '{"active":true}' | qq -e '.active' && echo "is active"
 ```
 
+## Git
+
+You can also use it for cleaner diffing of configuration files by adding to your `git/config` file a snippet such as
+
+```
+  [diff "csv"]
+  textconv = "f(){ in=\"$1\"; \
+      if command -v qq   >/dev/null 2>&1; then qq --monochrome-output --output gron --input csv  \"$in\" 2>/dev/null | sort && exit 0; fi; \
+      cat \"$in\"; \
+    }; f"
+  [diff "env"]
+    textconv = "f(){ qq --monochrome-output --output gron --input env  \"$1\" 2>/dev/null | sort || cat \"$1\"; }; f"
+  [diff "html"]
+    textconv = "f(){ qq --monochrome-output --output gron --input html \"$1\" 2>/dev/null | sort || cat \"$1\"; }; f"
+  [diff "ini"]
+    textconv = "f(){ qq --monochrome-output --output gron --input ini  \"$1\" 2>/dev/null | sort || cat \"$1\"; }; f"
+  [diff "toml"]
+    textconv = "f(){ qq --monochrome-output --output gron --input toml \"$1\" 2>/dev/null | sort || cat \"$1\"; }; f"
+```
+
+and to `git/attributes` correspondingly
+
+```
+*.csv diff=csv
+*.env diff=env
+*.html diff=html
+*.ini diff=ini
+*.toml diff=toml
+```
+
+
 ## Installation
 
 From brew:
