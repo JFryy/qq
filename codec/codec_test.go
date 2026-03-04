@@ -24,6 +24,8 @@ func TestGetEncodingType(t *testing.T) {
 		{"xml", XML},
 		{"ini", INI},
 		{"gron", GRON},
+		{"cbor", CBOR},
+		{"avro", AVRO},
 		//		{"html", HTML},
 	}
 
@@ -245,6 +247,49 @@ func TestPrettyFormatWithColors(t *testing.T) {
 	}
 }
 
+func TestCBORRoundTrip(t *testing.T) {
+	original := map[string]any{"name": "alice", "active": true, "score": float64(42)}
+
+	encoded, err := Marshal(original, CBOR)
+	if err != nil {
+		t.Fatalf("cbor marshal failed: %v", err)
+	}
+
+	var decoded any
+	if err := Unmarshal(encoded, CBOR, &decoded); err != nil {
+		t.Fatalf("cbor unmarshal failed: %v", err)
+	}
+
+	encodedJSON, _ := json.Marshal(original)
+	decodedJSON, _ := json.Marshal(decoded)
+	if string(encodedJSON) != string(decodedJSON) {
+		t.Errorf("cbor round-trip mismatch:\n  want: %s\n   got: %s", encodedJSON, decodedJSON)
+	}
+}
+
+func TestAvroRoundTrip(t *testing.T) {
+	original := []any{
+		map[string]any{"name": "alice", "score": float64(1)},
+		map[string]any{"name": "bob", "score": float64(2)},
+	}
+
+	encoded, err := Marshal(original, AVRO)
+	if err != nil {
+		t.Fatalf("avro marshal failed: %v", err)
+	}
+
+	var decoded any
+	if err := Unmarshal(encoded, AVRO, &decoded); err != nil {
+		t.Fatalf("avro unmarshal failed: %v", err)
+	}
+
+	encodedJSON, _ := json.Marshal(original)
+	decodedJSON, _ := json.Marshal(decoded)
+	if string(encodedJSON) != string(decodedJSON) {
+		t.Errorf("avro round-trip mismatch:\n  want: %s\n   got: %s", encodedJSON, decodedJSON)
+	}
+}
+
 func TestIsBinaryFormat(t *testing.T) {
 	tests := []struct {
 		format   EncodingType
@@ -252,6 +297,8 @@ func TestIsBinaryFormat(t *testing.T) {
 	}{
 		{PARQUET, true},
 		{MSGPACK, true},
+		{CBOR, true},
+		{AVRO, true},
 		{JSON, false},
 		{YAML, false},
 		{XML, false},

@@ -9,7 +9,9 @@ import (
 	"github.com/goccy/go-json"
 
 	// dedicated codec packages and wrappers where appropriate
+	"github.com/JFryy/qq/codec/avro"
 	"github.com/JFryy/qq/codec/base64"
+	"github.com/JFryy/qq/codec/cbor"
 	"github.com/JFryy/qq/codec/csv"
 	"github.com/JFryy/qq/codec/env"
 	"github.com/JFryy/qq/codec/gron"
@@ -53,6 +55,8 @@ const (
 	JSONL
 	JSONC
 	BASE64
+	CBOR
+	AVRO
 )
 
 // String implements the Stringer interface, converting the enum to its canonical string name.
@@ -65,7 +69,7 @@ const (
 // is intentional for performance - O(1) array lookup here vs O(n) map iteration.
 // The array indices must match the iota order in the const block above.
 func (e EncodingType) String() string {
-	return [...]string{"json", "yaml", "toml", "hcl", "csv", "tsv", "xml", "ini", "gron", "html", "line", "txt", "proto", "env", "parquet", "msgpack", "properties", "jsonl", "jsonc", "base64"}[e]
+	return [...]string{"json", "yaml", "toml", "hcl", "csv", "tsv", "xml", "ini", "gron", "html", "line", "txt", "proto", "env", "parquet", "msgpack", "properties", "jsonl", "jsonc", "base64", "cbor", "avro"}[e]
 }
 
 // General Encoding struct to hold unmarshal/marshal functions and associated file extensions for each encoding type
@@ -135,6 +139,8 @@ var (
 	jsonlCodec      = jsonl.Codec{}
 	jsoncCodec      = jsonc.Codec{}
 	base64Codec     = base64.Codec{}
+	cborCodec       = cbor.Codec{}
+	avroCodec       = avro.Codec{}
 )
 
 var Codecs = map[EncodingType]Encoding{
@@ -158,6 +164,8 @@ var Codecs = map[EncodingType]Encoding{
 	JSONL:      {jsonlCodec.Unmarshal, jsonlCodec.Marshal, []string{"jsonl", "ndjson", "jsonlines"}},
 	JSONC:      {jsoncCodec.Unmarshal, jsoncCodec.Marshal, []string{"jsonc"}},
 	BASE64:     {base64Codec.Unmarshal, base64Codec.Marshal, []string{"base64", "b64"}},
+	CBOR:       {cborCodec.Unmarshal, cborCodec.Marshal, []string{"cbor"}},
+	AVRO:       {avroCodec.Unmarshal, avroCodec.Marshal, []string{"avro"}},
 }
 
 func Unmarshal(input []byte, inputFileType EncodingType, data any) error {
@@ -190,5 +198,5 @@ func Marshal(v any, outputFileType EncodingType) ([]byte, error) {
 }
 
 func IsBinaryFormat(fileType EncodingType) bool {
-	return fileType == PARQUET || fileType == MSGPACK
+	return fileType == PARQUET || fileType == MSGPACK || fileType == CBOR || fileType == AVRO
 }

@@ -71,17 +71,30 @@ should_skip_conversion() {
     local output="$2"
     local reason=""
     
-    # CSV compatibility rules
-    if [[ "$input" == "csv" && "$output" != "csv" ]]; then
-        reason="CSV to non-CSV conversion not supported"
-    elif [[ "$input" != "csv" && "$output" == "csv" ]]; then
-        reason="Non-CSV to CSV conversion not supported"
-    # Parquet compatibility rules
+    # CSV and TSV are tabular formats; only interoperable with each other
+    if [[ "$input" == "csv" && "$output" != "csv" && "$output" != "tsv" ]]; then
+        reason="CSV to non-tabular conversion not supported"
+    elif [[ "$input" == "tsv" && "$output" != "tsv" && "$output" != "csv" ]]; then
+        reason="TSV to non-tabular conversion not supported"
+    elif [[ "$output" == "csv" && "$input" != "csv" && "$input" != "tsv" ]]; then
+        reason="Non-tabular to CSV conversion not supported"
+    elif [[ "$output" == "tsv" && "$input" != "tsv" && "$input" != "csv" ]]; then
+        reason="Non-tabular to TSV conversion not supported"
+    # Parquet is only interoperable with itself
     elif [[ "$output" == "parquet" && "$input" != "parquet" ]]; then
         reason="Non-parquet to parquet conversion not supported"
     elif [[ "$input" == "parquet" && "$output" != "parquet" ]]; then
         reason="Parquet to non-parquet conversion not supported"
-    # Nested structure rules  
+    # Avro output requires array-of-records input (tabular sources already caught above)
+    elif [[ "$output" == "avro" && "$input" != "avro" && "$input" != "cbor" && "$input" != "msgpack" ]]; then
+        reason="Non-tabular to avro conversion not supported"
+    # These test fixtures produce top-level arrays; TOML and INI require a top-level map
+    elif [[ ("$input" == "cbor" || "$input" == "avro" || "$input" == "jsonl") && ("$output" == "toml" || "$output" == "ini") ]]; then
+        reason="Array-valued $input cannot be marshaled to $output (requires top-level map)"
+    # Properties marshal requires a flat map[string]string; only env and properties satisfy that
+    elif [[ "$output" == "properties" && "$input" != "properties" && "$input" != "env" ]]; then
+        reason="Only flat string k/v formats can be marshaled to properties"
+    # env output only supports flat key-value structures
     elif [[ "$input" == "proto" && "$output" == "env" ]]; then
         reason="Proto to env conversion not supported (nested structures)"
     elif [[ "$output" == "env" && "$input" != "env" ]]; then
@@ -418,9 +431,9 @@ main() {
             # Run the conversion test
             local test_name="$input_ext -> $output_ext"
             local command
-            if [[ "$input_ext" == "parquet" || "$input_ext" == "msgpack" ]]; then
-                # Parquet files are binary, use qq directly 
-                command="bin/qq '$input_file' | bin/qq -o '$output_ext'"
+            if [[ "$input_ext" == "parquet" || "$input_ext" == "msgpack" || "$input_ext" == "cbor" || "$input_ext" == "avro" ]]; then
+                # Binary formats: pass file directly to qq
+                command="bin/qq '.' '$input_file' -o '$output_ext'"
             else
                 command="cat '$input_file' | grep -v '#' | bin/qq -i '$input_ext' -o '$output_ext'"
             fi
@@ -428,7 +441,7 @@ main() {
         done
         
         # Test embedded test cases (lines with # comments) - skip for binary files
-        if [[ "$input_ext" != "parquet" || "$input_ext" != "msgpack" ]] && grep -q "#" "$input_file" 2>/dev/null; then
+        if [[ "$input_ext" != "parquet" && "$input_ext" != "msgpack" && "$input_ext" != "cbor" && "$input_ext" != "avro" ]] && grep -q "#" "$input_file" 2>/dev/null; then
             # Process each line with a # comment individually
             while IFS= read -r line; do
                 if [[ "$line" =~ ^#[[:space:]]*(.+)$ ]]; then
@@ -452,7 +465,7 @@ main() {
         local current_ext
         current_ext="${file##*.}"
         
-        if [[ "$current_ext" == "csv" || "$current_ext" == "parquet" || "$current_ext" == "msgpack" ]]; then
+        if [[ "$current_ext" == "csv" || "$current_ext" == "tsv" || "$current_ext" == "parquet" || "$current_ext" == "msgpack" || "$current_ext" == "cbor" || "$current_ext" == "avro" ]]; then
             continue
         fi
         

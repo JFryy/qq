@@ -7,14 +7,45 @@
 [![Latest Release](https://img.shields.io/github/v/release/JFryy/qq)](https://github.com/JFryy/qq/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/jfryy/qq)](https://hub.docker.com/r/jfryy/qq)
 
-`qq` is an interoperable configuration format transcoder with `jq` query syntax powered by `gojq`. `qq` is multi modal, and can be used as a replacement for `jq` or be interacted with via 
-a REPL with autocomplete and realtime rendering preview for building queries.
+`qq` is a multi-format transcoder and query tool powered by `jq` syntax. It lets you query and convert between configuration and data formats without needing separate tools for each one.
 
-`qq` is designed to support input output operations on a large variety of structured data codecs with the power of jq, please refer to the below for supported formats/extensions.
+Supported formats (read/write): `.json`, `.yaml`/`.yml`, `.toml`, `.xml`, `.hcl`/`.tf`, `.csv`, `.tsv`, `.ini`, `.properties`, `.gron`, `.html`, `.jsonl`/`.ndjson`/`.jsonlines`, `.jsonc`, `.parquet`, `.msgpack`/`.mpk`, `.cbor`, `.avro`, `.base64`/`.b64`, `.txt`/`.text`,
+
+Read-only: `.proto`, `.env`
+
+## Transcoding Between Formats
+
+Any input format can be transcoded to any output format in a single command. Use `-i`/`--input` and `-o`/`--output` to specify formats explicitly, or let `qq` detect them from the file extension.
+
+```sh
+# YAML → JSON
+qq '.' config.yaml -o json
+
+# TOML → YAML
+qq '.' pyproject.toml -o yaml
+
+# CSV → Parquet
+qq '.' data.csv -o parquet
+
+# Avro → JSON (schema embedded in OCF file)
+qq '.' events.avro
+
+# JSON → CBOR
+qq '.' payload.json -o cbor
+
+# XML → TOML
+qq '.root' config.xml -o toml
+
+# Terraform HCL → JSON (useful for scripting)
+qq '.' infra.tf -o json
+
+# Pipe formats freely
+cat file.msgpack | qq -i msgpack -o yaml
+```
 
 ## Usage
 
-Here's some example usage, this emphasizes the interactive mode for demonstration, but `qq` is designed for usage in shell scripts.
+Here's some example usage, this emphasises the interactive mode for demonstration, but `qq` is designed for usage in shell scripts.
 ![Demo GIF](docs/demo.gif)
 
 ```sh
@@ -79,7 +110,7 @@ and to `git/attributes` correspondingly
 From brew:
 
 ```shell
-brew install jfryy/tap/qq 
+brew install jfryy/tap/qq
 ```
 
 From [AUR](https://aur.archlinux.org/packages/qq-git) (ArchLinux):
@@ -116,15 +147,6 @@ echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 * Provide an interactive mode for building queries with autocomplete and realtime rendering preview.
 * Streaming mode (`--stream`) (identical to jq's `--stream`), plus extended support for JSONL, YAML, CSV, TSV, and line-delimited formats - all emit path-value pairs for memory-efficient processing of large files.
 * `qq` is broad, but performant encodings are still a priority, execution is quite fast despite covering a broad range of codecs. `qq` performs comparitively with dedicated tools for a given format.
-
-
-## Supported Extensions/Formats
-
-```
-.json, .jsonl, .ndjson, .jsonlines, .jsonc, .yaml, .yml, .toml, .xml, .ini, .hcl, .tf,
-.gron, .csv, .tsv, .properties, .html, .parquet, .msgpack, .mpk, .base64, .b64,
-.proto (input only), .txt (input only), .env (input only)
-```
 
 ## Contributions
 
