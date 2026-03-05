@@ -1,0 +1,18 @@
+// Personal record with contact details
+{
+  "name": "John Doe",   // full name
+  "age": 30,
+  "email": "john.doe@example.com",
+  "address": {
+    "street": "123 Main St",
+    "city": "Anytown",
+    "state": "CA",
+    "zipcode": "12345"
+  },
+  /* phone numbers */
+  "phone": {
+    "home": "555-1234",
+    "work": "555-5678"
+  },
+  "active": true
+}

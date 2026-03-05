@@ -1,0 +1,4 @@
+{"id": 1, "name": "Alice", "city": "New York", "active": true, "score": 95.5}
+{"id": 2, "name": "Bob", "city": "Los Angeles", "active": false, "score": 87.2}
+{"id": 3, "name": "Carol", "city": "Chicago", "active": true, "score": 91.0}
+{"id": 4, "name": "Dave", "city": "Houston", "active": true, "score": 78.4}
