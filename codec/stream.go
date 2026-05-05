@@ -319,10 +319,13 @@ func convertToStream(value any, basePath []any) []any {
 			path := append(append([]any{}, basePath...), key)
 			result = append(result, convertToStream(val, path)...)
 		}
-		// Emit closing marker
 		if hasKeys {
 			closePath := append(append([]any{}, basePath...), lastKey)
 			result = append(result, []any{closePath})
+		} else {
+			pathCopy := make([]any, len(basePath))
+			copy(pathCopy, basePath)
+			result = append(result, []any{pathCopy, map[string]any{}})
 		}
 
 	case []any:
@@ -332,10 +335,13 @@ func convertToStream(value any, basePath []any) []any {
 			path := append(append([]any{}, basePath...), i)
 			result = append(result, convertToStream(val, path)...)
 		}
-		// Emit closing marker
 		if lastIndex >= 0 {
 			closePath := append(append([]any{}, basePath...), lastIndex)
 			result = append(result, []any{closePath})
+		} else {
+			pathCopy := make([]any, len(basePath))
+			copy(pathCopy, basePath)
+			result = append(result, []any{pathCopy, []any{}})
 		}
 
 	default:
@@ -374,10 +380,14 @@ func parseStreamToChannel(decoder *json.Decoder, path []any, dataChan chan<- any
 			if _, err := decoder.Token(); err != nil {
 				return err
 			}
-			// Emit closing marker
 			if lastIndex >= 0 {
 				closePath := append(append([]any{}, path...), lastIndex)
 				dataChan <- []any{closePath}
+			} else {
+				// Empty array: jq emits [path, []]
+				pathCopy := make([]any, len(path))
+				copy(pathCopy, path)
+				dataChan <- []any{pathCopy, []any{}}
 			}
 			return nil
 
@@ -406,10 +416,14 @@ func parseStreamToChannel(decoder *json.Decoder, path []any, dataChan chan<- any
 			if _, err := decoder.Token(); err != nil {
 				return err
 			}
-			// Emit closing marker
 			if hasKeys {
 				closePath := append(append([]any{}, path...), lastKey)
 				dataChan <- []any{closePath}
+			} else {
+				// Empty object: jq emits [path, {}]
+				pathCopy := make([]any, len(path))
+				copy(pathCopy, path)
+				dataChan <- []any{pathCopy, map[string]any{}}
 			}
 			return nil
 

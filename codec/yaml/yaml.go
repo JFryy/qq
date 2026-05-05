@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/goccy/go-yaml"
+	"go.yaml.in/yaml/v4"
 )
 
 type Codec struct{}
@@ -132,7 +132,7 @@ func (c Codec) Marshal(v any) ([]byte, error) {
 				buf.WriteString("---\n")
 
 				// Marshal the document
-				docBytes, err := yaml.Marshal(doc)
+				docBytes, err := marshalIndent(doc)
 				if err != nil {
 					return nil, err
 				}
@@ -143,5 +143,15 @@ func (c Codec) Marshal(v any) ([]byte, error) {
 	}
 
 	// For everything else, use standard YAML marshaling
-	return yaml.Marshal(v)
+	return marshalIndent(v)
+}
+
+func marshalIndent(v any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }

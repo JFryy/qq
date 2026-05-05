@@ -13,7 +13,6 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/goccy/go-json v0.10.5
-	github.com/goccy/go-yaml v1.19.2
 	github.com/hamba/avro/v2 v2.31.0
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/itchyny/gojq v0.12.18
@@ -23,6 +22,7 @@ require (
 	github.com/tmccombs/hcl2json v0.6.8
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	github.com/zclconf/go-cty v1.18.0
+	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	golang.org/x/net v0.51.0
 	gopkg.in/ini.v1 v1.67.1
 )

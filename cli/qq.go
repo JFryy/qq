@@ -26,7 +26,7 @@ func CreateRootCmd() *cobra.Command {
 	var slurp bool
 	var exitStatus bool
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
-	v := "v0.3.3"
+	v := "v0.3.4"
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
 		Use:   "qq [expression] [file] [flags] \n  cat [file] | qq [expression] [flags] \n  qq -I file",
@@ -420,20 +420,14 @@ func executeStreamingQuery(query *gojq.Query, reader io.Reader, inputType codec.
 					os.Exit(1)
 				}
 
-				b, err := codec.Marshal(v, outputType)
+				// Stream elements are always emitted as compact JSON (one line
+				// per element), matching jq --stream behaviour regardless of -o.
+				b, err := json.Marshal(v)
 				if err != nil {
 					fmt.Printf("Error formatting result: %v\n", err)
 					os.Exit(1)
 				}
-
-				if codec.IsBinaryFormat(outputType) {
-					// For binary formats, write directly to stdout as raw bytes
-					os.Stdout.Write(b)
-				} else {
-					s := string(b)
-					r, _ := codec.PrettyFormat(s, outputType, rawOut, monochrome)
-					fmt.Println(r)
-				}
+				fmt.Println(string(b))
 			}
 
 		case err := <-errChan:

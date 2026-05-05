@@ -495,6 +495,29 @@ active: true`
 	}
 }
 
+func TestMultilineBlockScalarInSequence(t *testing.T) {
+	// Regression test: multiline plain scalar as a sequence item must parse
+	// identically to an equivalent block scalar (goccy/go-yaml rejected it).
+	yamlData := "key:\n  - dummy_args=(\n      --null-input\n    )\n"
+
+	codec := &Codec{}
+
+	var result any
+	err := codec.Unmarshal([]byte(yamlData), &result)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal multiline plain scalar: %v", err)
+	}
+
+	doc := result.(map[string]any)
+	items := doc["key"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("Expected 1 item, got %d", len(items))
+	}
+	if items[0] != "dummy_args=( --null-input )" {
+		t.Errorf("Expected 'dummy_args=( --null-input )', got %v", items[0])
+	}
+}
+
 func TestEmptyDocuments(t *testing.T) {
 	// Test handling of empty documents
 	multiDocYAML := `---
