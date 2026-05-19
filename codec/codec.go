@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/goccy/go-json"
 
 	// dedicated codec packages and wrappers where appropriate
@@ -26,6 +25,7 @@ import (
 	"github.com/JFryy/qq/codec/parquet"
 	"github.com/JFryy/qq/codec/properties"
 	proto "github.com/JFryy/qq/codec/proto"
+	qqtoml "github.com/JFryy/qq/codec/toml"
 	"github.com/JFryy/qq/codec/tsv"
 	"github.com/JFryy/qq/codec/xml"
 	"github.com/JFryy/qq/codec/yaml"
@@ -141,12 +141,13 @@ var (
 	base64Codec     = base64.Codec{}
 	cborCodec       = cbor.Codec{}
 	avroCodec       = avro.Codec{}
+	tomlCodec       = qqtoml.Codec{}
 )
 
 var Codecs = map[EncodingType]Encoding{
 	JSON:       {json.Unmarshal, jsonCodec.Marshal, []string{"json"}},
 	YAML:       {yamlCodec.Unmarshal, yamlCodec.Marshal, []string{"yaml", "yml"}},
-	TOML:       {toml.Unmarshal, toml.Marshal, []string{"toml"}},
+	TOML:       {tomlCodec.Unmarshal, tomlCodec.Marshal, []string{"toml"}},
 	HCL:        {hclCodec.Unmarshal, hclCodec.Marshal, []string{"hcl", "tf"}},
 	CSV:        {csvCodec.Unmarshal, csvCodec.Marshal, []string{"csv"}},
 	TSV:        {tsvCodec.Unmarshal, tsvCodec.Marshal, []string{"tsv"}},
