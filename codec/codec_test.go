@@ -498,3 +498,56 @@ m: 3
 		t.Errorf("XML to XML order not preserved:\n  got: %s\n  want: %s", string(marshaledXML), xmlInput)
 	}
 }
+
+func TestDisableAutoConvert(t *testing.T) {
+	csvInput := "status,count\nF,1\nT,0\n"
+
+	// 1. By default, F/T/1/0 are coerced into booleans/integers
+	var valDefault any
+	if err := Unmarshal([]byte(csvInput), CSV, &valDefault); err != nil {
+		t.Fatalf("CSV Unmarshal failed: %v", err)
+	}
+	marshaledDefault, err := Marshal(valDefault, JSON)
+	if err != nil {
+		t.Fatalf("Marshal default JSON failed: %v", err)
+	}
+	expectedDefault := `[
+  {
+    "count": 1,
+    "status": false
+  },
+  {
+    "count": 0,
+    "status": true
+  }
+]`
+	if string(marshaledDefault) != expectedDefault {
+		t.Errorf("expected auto-coerced types:\n  got: %s\n  want: %s", string(marshaledDefault), expectedDefault)
+	}
+
+	// 2. When DisableAutoConvert is true, all remain string type
+	SetDisableAutoConvert(true)
+	defer SetDisableAutoConvert(false) // reset
+
+	var valDisabled any
+	if err := Unmarshal([]byte(csvInput), CSV, &valDisabled); err != nil {
+		t.Fatalf("CSV Unmarshal failed: %v", err)
+	}
+	marshaledDisabled, err := Marshal(valDisabled, JSON)
+	if err != nil {
+		t.Fatalf("Marshal disabled JSON failed: %v", err)
+	}
+	expectedDisabled := `[
+  {
+    "count": "1",
+    "status": "F"
+  },
+  {
+    "count": "0",
+    "status": "T"
+  }
+]`
+	if string(marshaledDisabled) != expectedDisabled {
+		t.Errorf("expected string types when auto-conversion is disabled:\n  got: %s\n  want: %s", string(marshaledDisabled), expectedDisabled)
+	}
+}

@@ -208,3 +208,7 @@ func SetPreserveKeyOrder(preserve bool) {
 		util.ClearKeyOrder()
 	}
 }
+
+func SetDisableAutoConvert(disable bool) {
+	util.DisableAutoConvert = disable
+}

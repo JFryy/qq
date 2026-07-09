@@ -7,6 +7,9 @@ import (
 )
 
 func ParseValue(value string) any {
+	if DisableAutoConvert {
+		return value
+	}
 	value = strings.TrimSpace(value)
 
 	if intValue, err := strconv.Atoi(value); err == nil {

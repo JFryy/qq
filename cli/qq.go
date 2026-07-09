@@ -26,8 +26,9 @@ func CreateRootCmd() *cobra.Command {
 	var slurp bool
 	var exitStatus bool
 	var preserveKeyOrder bool
+	var noAutoConvert bool
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
-	v := "v0.3.4"
+	v := "0.3.5-b865348"
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
 		Use:   "qq [expression] [file] [flags] \n  cat [file] | qq [expression] [flags] \n  qq -I file",
@@ -47,7 +48,7 @@ func CreateRootCmd() *cobra.Command {
 				}
 				os.Exit(0)
 			}
-			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, preserveKeyOrder)
+			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, preserveKeyOrder, noAutoConvert)
 		},
 	}
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
@@ -61,12 +62,14 @@ func CreateRootCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&slurp, "slurp", "s", false, "read all inputs into an array and use it as the single input value")
 	cmd.Flags().BoolVarP(&exitStatus, "exit-status", "e", false, "set exit status code based on the output")
 	cmd.Flags().BoolVarP(&preserveKeyOrder, "preserve-key-order", "k", false, "preserve order of keys in JSON and YAML output")
+	cmd.Flags().BoolVar(&noAutoConvert, "no-auto-convert", false, "disable automatic type coercion of strings during parsing")
 
 	return cmd
 }
 
-func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool) {
+func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool, noAutoConvert bool) {
 	codec.SetPreserveKeyOrder(preserveKeyOrder)
+	codec.SetDisableAutoConvert(noAutoConvert)
 	var input []byte
 	var err error
 	var expression string

@@ -10,6 +10,9 @@ var (
 
 	// PreserveKeyOrder determines if the JSON and YAML codecs preserve the original key order.
 	PreserveKeyOrder bool
+
+	// DisableAutoConvert determines if string values in parser codecs are converted automatically.
+	DisableAutoConvert bool
 )
 
 // SetKeyOrder records the original order of keys for a map pointer.
