@@ -86,7 +86,7 @@ func (c *Codec) nodeToMap(node *html.Node) any {
 		switch child.Type {
 		case html.TextNode:
 			text := strings.TrimSpace(child.Data)
-			if text != "" && !(strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r")) {
+			if text != "" && (strings.TrimSpace(text) != "" || !strings.ContainsAny(text, "\n\r")) {
 				text, _ = strings.CutSuffix(text, "\n\r")
 				text, _ = strings.CutPrefix(text, "\n")
 				text, _ = decodeUnicodeEscapes(text)
@@ -94,7 +94,7 @@ func (c *Codec) nodeToMap(node *html.Node) any {
 			}
 		case html.CommentNode:
 			text := strings.TrimSpace(child.Data)
-			if text != "" && !(strings.TrimSpace(text) == "" && strings.ContainsAny(text, "\n\r")) {
+			if text != "" && (strings.TrimSpace(text) != "" || !strings.ContainsAny(text, "\n\r")) {
 				text, _ = strings.CutSuffix(text, "\n\r")
 				text, _ = strings.CutPrefix(text, "\n")
 				text = html.UnescapeString(text)

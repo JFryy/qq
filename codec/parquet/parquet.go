@@ -51,7 +51,7 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error creating parquet writer: %v", err)
 	}
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	builders := make([]array.Builder, len(fields))
 	for i := range fields {
@@ -95,7 +95,7 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 	if err != nil {
 		return fmt.Errorf("error creating parquet reader: %v", err)
 	}
-	defer parquetFile.Close()
+	defer func() { _ = parquetFile.Close() }()
 
 	fileReader, err := pqarrow.NewFileReader(parquetFile, pqarrow.ArrowReadProperties{}, memory.NewGoAllocator())
 	if err != nil {

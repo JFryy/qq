@@ -26,11 +26,11 @@ func TestExecuteStreamingQuery_BasicObject(t *testing.T) {
 
 	executeStreamingQuery(query, reader, codec.JSON, codec.JSON, false, true)
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 
 	// Should contain path-value pairs
@@ -57,11 +57,11 @@ func TestExecuteStreamingQuery_Array(t *testing.T) {
 
 	executeStreamingQuery(query, reader, codec.JSON, codec.JSON, false, true)
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 
 	// Should contain array indices and values
@@ -86,11 +86,11 @@ func TestExecuteStreamingQuery_WithFilter(t *testing.T) {
 
 	executeStreamingQuery(query, reader, codec.JSON, codec.JSON, false, true)
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 
 	// Should contain path-value pairs but not the closing marker
@@ -124,11 +124,11 @@ func TestExecuteStreamingQuery_NestedStructure(t *testing.T) {
 
 	executeStreamingQuery(query, reader, codec.JSON, codec.JSON, false, true)
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 
 	// Should contain nested paths

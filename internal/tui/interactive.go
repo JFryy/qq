@@ -213,7 +213,7 @@ func jsonStrToInterface(jsonStr string) (any, error) {
 	var jsonData any
 	err := json.Unmarshal([]byte(jsonStr), &jsonData)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid JSON input: %s", err)
+		return nil, fmt.Errorf("invalid JSON input: %s", err)
 	}
 	return jsonData, nil
 }

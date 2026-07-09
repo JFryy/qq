@@ -25,6 +25,7 @@ func CreateRootCmd() *cobra.Command {
 	var stream bool
 	var slurp bool
 	var exitStatus bool
+	var preserveKeyOrder bool
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
 	v := "v0.3.4"
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
@@ -46,7 +47,7 @@ func CreateRootCmd() *cobra.Command {
 				}
 				os.Exit(0)
 			}
-			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus)
+			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, preserveKeyOrder)
 		},
 	}
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
@@ -59,11 +60,13 @@ func CreateRootCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&stream, "stream", false, "parse input in streaming fashion, emitting path-value pairs (supports: json, jsonl, yaml, csv, tsv, line)")
 	cmd.Flags().BoolVarP(&slurp, "slurp", "s", false, "read all inputs into an array and use it as the single input value")
 	cmd.Flags().BoolVarP(&exitStatus, "exit-status", "e", false, "set exit status code based on the output")
+	cmd.Flags().BoolVarP(&preserveKeyOrder, "preserve-key-order", "k", false, "preserve order of keys in JSON and YAML output")
 
 	return cmd
 }
 
-func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool) {
+func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool) {
+	codec.SetPreserveKeyOrder(preserveKeyOrder)
 	var input []byte
 	var err error
 	var expression string
@@ -200,7 +203,7 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 
 		// Close file if it was opened
 		if file, ok := inputReader.(*os.File); ok && file != os.Stdin {
-			file.Close()
+			_ = file.Close()
 		}
 		os.Exit(0)
 	}
@@ -298,7 +301,10 @@ func executeQuery(query *gojq.Query, data any, fileType codec.EncodingType, rawO
 
 		if codec.IsBinaryFormat(fileType) {
 			// For binary formats, write directly to stdout as raw bytes
-			os.Stdout.Write(b)
+			if _, err := os.Stdout.Write(b); err != nil {
+				fmt.Printf("Error writing binary output: %v\n", err)
+				return 1
+			}
 		} else {
 			s := string(b)
 			r, _ := codec.PrettyFormat(s, fileType, rawOut, monochrome)

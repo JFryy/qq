@@ -314,3 +314,187 @@ func TestIsBinaryFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestKeyOrderPreservation(t *testing.T) {
+	// Test default behavior (PreserveKeyOrder = false) -> alphabetical sorting
+	SetPreserveKeyOrder(false)
+
+	jsonInput := `{"z":1,"a":2,"m":3}`
+	var valJSON any
+	if err := Unmarshal([]byte(jsonInput), JSON, &valJSON); err != nil {
+		t.Fatalf("JSON Unmarshal failed: %v", err)
+	}
+
+	marshaledJSON, err := Marshal(valJSON, JSON)
+	if err != nil {
+		t.Fatalf("JSON Marshal failed: %v", err)
+	}
+	expectedSortedJSON := `{
+  "a": 2,
+  "m": 3,
+  "z": 1
+}`
+	if string(marshaledJSON) != expectedSortedJSON {
+		t.Errorf("Default JSON should sort keys alphabetically:\n  got: %s\n  want: %s", string(marshaledJSON), expectedSortedJSON)
+	}
+
+	// Test flag enabled behavior (PreserveKeyOrder = true) -> preserve order
+	SetPreserveKeyOrder(true)
+	defer SetPreserveKeyOrder(false) // Reset for other tests
+
+	var valJSONPreserved any
+	if err := Unmarshal([]byte(jsonInput), JSON, &valJSONPreserved); err != nil {
+		t.Fatalf("JSON Unmarshal failed: %v", err)
+	}
+
+	marshaledJSONPreserved, err := Marshal(valJSONPreserved, JSON)
+	if err != nil {
+		t.Fatalf("JSON Marshal failed: %v", err)
+	}
+	expectedPreservedJSON := `{
+  "z": 1,
+  "a": 2,
+  "m": 3
+}`
+	if string(marshaledJSONPreserved) != expectedPreservedJSON {
+		t.Errorf("JSON key order not preserved with flag:\n  got: %s\n  want: %s", string(marshaledJSONPreserved), expectedPreservedJSON)
+	}
+
+	// Test YAML key order preservation
+	yamlInput := `z: 1
+a: 2
+m: 3
+`
+	var valYAML any
+	if err := Unmarshal([]byte(yamlInput), YAML, &valYAML); err != nil {
+		t.Fatalf("YAML Unmarshal failed: %v", err)
+	}
+
+	marshaledYAML, err := Marshal(valYAML, YAML)
+	if err != nil {
+		t.Fatalf("YAML Marshal failed: %v", err)
+	}
+	expectedPreservedYAML := `z: 1
+a: 2
+m: 3
+`
+	if string(marshaledYAML) != expectedPreservedYAML {
+		t.Errorf("YAML key order not preserved with flag:\n  got: %s\n  want: %s", string(marshaledYAML), expectedPreservedYAML)
+	}
+
+	// Test CSV key/column order preservation
+	csvInput := "z,a,m\n1,2,3\n"
+	var valCSV any
+	if err := Unmarshal([]byte(csvInput), CSV, &valCSV); err != nil {
+		t.Fatalf("CSV Unmarshal failed: %v", err)
+	}
+
+	marshaledCSV, err := Marshal(valCSV, CSV)
+	if err != nil {
+		t.Fatalf("CSV Marshal failed: %v", err)
+	}
+	expectedPreservedCSV := "z,a,m\n1,2,3\n"
+	if string(marshaledCSV) != expectedPreservedCSV {
+		t.Errorf("CSV column order not preserved with flag:\n  got: %s\n  want: %s", string(marshaledCSV), expectedPreservedCSV)
+	}
+
+	// Test TSV key/column order preservation
+	tsvInput := "z\ta\tm\n1\t2\t3\n"
+	var valTSV any
+	if err := Unmarshal([]byte(tsvInput), TSV, &valTSV); err != nil {
+		t.Fatalf("TSV Unmarshal failed: %v", err)
+	}
+
+	marshaledTSV, err := Marshal(valTSV, TSV)
+	if err != nil {
+		t.Fatalf("TSV Marshal failed: %v", err)
+	}
+	expectedPreservedTSV := "z\ta\tm\n1\t2\t3\n"
+	if string(marshaledTSV) != expectedPreservedTSV {
+		t.Errorf("TSV column order not preserved with flag:\n  got: %s\n  want: %s", string(marshaledTSV), expectedPreservedTSV)
+	}
+
+	// Test JSON to CSV column preservation
+	jsonSliceInput := `[{"z":1,"a":2,"m":3}]`
+	var valJSONSlice any
+	if err := Unmarshal([]byte(jsonSliceInput), JSON, &valJSONSlice); err != nil {
+		t.Fatalf("JSON Slice Unmarshal failed: %v", err)
+	}
+	marshaledJSONtoCSV, err := Marshal(valJSONSlice, CSV)
+	if err != nil {
+		t.Fatalf("JSON to CSV Marshal failed: %v", err)
+	}
+	expectedJSONtoCSV := "z,a,m\n1,2,3\n"
+	if string(marshaledJSONtoCSV) != expectedJSONtoCSV {
+		t.Errorf("JSON to CSV column order not preserved:\n  got: %s\n  want: %s", string(marshaledJSONtoCSV), expectedJSONtoCSV)
+	}
+
+	// Test CSV to JSON key preservation
+	var valCSVtoJSON any
+	if err := Unmarshal([]byte(expectedJSONtoCSV), CSV, &valCSVtoJSON); err != nil {
+		t.Fatalf("CSV Unmarshal failed: %v", err)
+	}
+	marshaledCSVtoJSON, err := Marshal(valCSVtoJSON, JSON)
+	if err != nil {
+		t.Fatalf("CSV to JSON Marshal failed: %v", err)
+	}
+	expectedCSVtoJSON := `[
+  {
+    "z": 1,
+    "a": 2,
+    "m": 3
+  }
+]`
+	if string(marshaledCSVtoJSON) != expectedCSVtoJSON {
+		t.Errorf("CSV to JSON key order not preserved:\n  got: %s\n  want: %s", string(marshaledCSVtoJSON), expectedCSVtoJSON)
+	}
+
+	// Test TSV to CSV preservation
+	var valTSVtoCSV any
+	if err := Unmarshal([]byte(tsvInput), TSV, &valTSVtoCSV); err != nil {
+		t.Fatalf("TSV Unmarshal failed: %v", err)
+	}
+	marshaledTSVtoCSV, err := Marshal(valTSVtoCSV, CSV)
+	if err != nil {
+		t.Fatalf("TSV to CSV Marshal failed: %v", err)
+	}
+	expectedTSVtoCSV := "z,a,m\n1,2,3\n"
+	if string(marshaledTSVtoCSV) != expectedTSVtoCSV {
+		t.Errorf("TSV to CSV column order not preserved:\n  got: %s\n  want: %s", string(marshaledTSVtoCSV), expectedTSVtoCSV)
+	}
+
+	// Test CSV to TSV preservation
+	var valCSVtoTSV any
+	if err := Unmarshal([]byte(csvInput), CSV, &valCSVtoTSV); err != nil {
+		t.Fatalf("CSV Unmarshal failed: %v", err)
+	}
+	marshaledCSVtoTSV, err := Marshal(valCSVtoTSV, TSV)
+	if err != nil {
+		t.Fatalf("CSV to TSV Marshal failed: %v", err)
+	}
+	expectedCSVtoTSV := "z\ta\tm\n1\t2\t3\n"
+	if string(marshaledCSVtoTSV) != expectedCSVtoTSV {
+		t.Errorf("CSV to TSV column order not preserved:\n  got: %s\n  want: %s", string(marshaledCSVtoTSV), expectedCSVtoTSV)
+	}
+
+	// Test XML to XML preservation
+	xmlInput := `<root>
+  <z>1</z>
+  <a>2</a>
+  <m>
+    <y>10</y>
+    <x>20</x>
+  </m>
+</root>`
+	var valXML any
+	if err := Unmarshal([]byte(xmlInput), XML, &valXML); err != nil {
+		t.Fatalf("XML Unmarshal failed: %v", err)
+	}
+	marshaledXML, err := Marshal(valXML, XML)
+	if err != nil {
+		t.Fatalf("XML Marshal failed: %v", err)
+	}
+	if string(marshaledXML) != xmlInput {
+		t.Errorf("XML to XML order not preserved:\n  got: %s\n  want: %s", string(marshaledXML), xmlInput)
+	}
+}

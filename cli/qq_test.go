@@ -45,8 +45,8 @@ func TestIsFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name())
-	tmpfile.Close()
+	defer func() { _ = os.Remove(tmpfile.Name()) }()
+	_ = tmpfile.Close()
 
 	tests := []struct {
 		name     string
@@ -79,8 +79,8 @@ func TestIsTerminal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer r.Close()
-	defer w.Close()
+	defer func() { _ = r.Close() }()
+	defer func() { _ = w.Close() }()
 
 	if isTerminal(w) {
 		t.Error("Pipe should not be detected as terminal")
@@ -143,6 +143,7 @@ func TestRootCmdFlagDefaults(t *testing.T) {
 		{"raw-output", false},
 		{"monochrome-output", false},
 		{"interactive", false},
+		{"preserve-key-order", false},
 	}
 
 	for _, tt := range boolTests {
@@ -221,15 +222,15 @@ func TestVersionFlag(t *testing.T) {
 				done <- true
 			}
 		}()
-		cmd.Execute()
+		_ = cmd.Execute()
 		done <- true
 	}()
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 
 	<-done

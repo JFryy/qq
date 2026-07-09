@@ -92,11 +92,11 @@ func TestExecuteQuery_WithSlurp(t *testing.T) {
 
 	exitCode := executeQuery(query, data, codec.JSON, false, true, false)
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := strings.TrimSpace(buf.String())
 
 	if exitCode != 0 {
@@ -121,11 +121,11 @@ func TestExecuteQuery_ExitStatus_True(t *testing.T) {
 
 	exitCode := executeQuery(query, true, codec.JSON, false, true, true)
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 
 	if exitCode != 0 {
 		t.Errorf("expected exit code 0 for true value, got %d", exitCode)
@@ -145,11 +145,11 @@ func TestExecuteQuery_ExitStatus_False(t *testing.T) {
 
 	exitCode := executeQuery(query, false, codec.JSON, false, true, true)
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 
 	if exitCode != 1 {
 		t.Errorf("expected exit code 1 for false value, got %d", exitCode)
@@ -157,7 +157,7 @@ func TestExecuteQuery_ExitStatus_False(t *testing.T) {
 }
 
 func TestExecuteQuery_ExitStatus_Null(t *testing.T) {
-	query, err := gojq.Parse(".")
+	query, err := gojq.Parse(".nonexistent")
 	if err != nil {
 		t.Fatalf("failed to parse query: %v", err)
 	}
@@ -167,16 +167,14 @@ func TestExecuteQuery_ExitStatus_Null(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	// Use a query that produces null without error
-	query, _ = gojq.Parse(".nonexistent")
 	data := map[string]any{}
 	exitCode := executeQuery(query, data, codec.JSON, false, true, true)
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 
 	if exitCode != 1 {
 		t.Errorf("expected exit code 1 for null value, got %d", exitCode)
@@ -196,11 +194,11 @@ func TestExecuteQuery_ExitStatus_NoOutput(t *testing.T) {
 
 	exitCode := executeQuery(query, 5, codec.JSON, false, true, true)
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 
 	if exitCode != 4 {
 		t.Errorf("expected exit code 4 for no output, got %d", exitCode)

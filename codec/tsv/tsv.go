@@ -5,12 +5,13 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"github.com/JFryy/qq/codec/util"
-	"github.com/goccy/go-json"
 	"io"
 	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/JFryy/qq/codec/util"
+	"github.com/goccy/go-json"
 )
 
 type Codec struct{}
@@ -36,10 +37,19 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 	}
 
 	var headers []string
-	for key := range firstElemValue {
-		headers = append(headers, key)
+	ptr := uintptr(reflect.ValueOf(firstElemValue).UnsafePointer())
+	if util.PreserveKeyOrder {
+		if list, ok := util.GetKeyOrder(ptr); ok && len(list) == len(firstElemValue) {
+			headers = list
+		}
 	}
-	slices.Sort(headers)
+
+	if len(headers) == 0 {
+		for key := range firstElemValue {
+			headers = append(headers, key)
+		}
+		slices.Sort(headers)
+	}
 
 	if err := w.Write(headers); err != nil {
 		return nil, fmt.Errorf("error writing TSV headers: %v", err)
@@ -98,17 +108,26 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 				rowMap[header] = ""
 			}
 		}
+		if util.PreserveKeyOrder {
+			ptr := uintptr(reflect.ValueOf(rowMap).UnsafePointer())
+			util.SetKeyOrder(ptr, headers)
+		}
 		records = append(records, rowMap)
 	}
 
-	jsonData, err := json.Marshal(records)
-	if err != nil {
-		return fmt.Errorf("error marshaling to JSON: %v", err)
-	}
+	return setInterface(v, records)
+}
 
-	if err := json.Unmarshal(jsonData, v); err != nil {
-		return fmt.Errorf("error unmarshaling JSON: %v", err)
+func setInterface(v any, val any) error {
+	switch ptr := v.(type) {
+	case *any:
+		*ptr = val
+		return nil
+	default:
+		b, err := json.Marshal(val)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(b, v)
 	}
-
-	return nil
 }
