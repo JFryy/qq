@@ -5,8 +5,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
+	qqjson "github.com/JFryy/qq/codec/json"
+	"github.com/JFryy/qq/codec/util"
 	"github.com/goccy/go-json"
 )
 
@@ -22,6 +25,8 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 	var result []any
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 
+	jsonCodec := &qqjson.Codec{}
+
 	lineNum := 0
 	for scanner.Scan() {
 		lineNum++
@@ -33,7 +38,13 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 		}
 
 		var obj any
-		if err := json.Unmarshal([]byte(line), &obj); err != nil {
+		var err error
+		if util.PreserveKeyOrder {
+			err = jsonCodec.Unmarshal([]byte(line), &obj)
+		} else {
+			err = json.Unmarshal([]byte(line), &obj)
+		}
+		if err != nil {
 			return fmt.Errorf("error parsing JSON on line %d: %v", lineNum, err)
 		}
 		result = append(result, obj)
@@ -43,36 +54,41 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 		return fmt.Errorf("error reading JSONL: %v", err)
 	}
 
-	// Marshal and unmarshal through JSON to convert to target type
-	jsonData, err := json.Marshal(result)
+	jsonData, err := jsonCodec.MarshalCompact(result)
 	if err != nil {
 		return err
 	}
 
+	if util.PreserveKeyOrder {
+		return jsonCodec.Unmarshal(jsonData, v)
+	}
 	return json.Unmarshal(jsonData, v)
 }
 
 // Marshal converts data to JSONL format (one JSON object per line)
 func (c *Codec) Marshal(v any) ([]byte, error) {
-	// Convert to JSON first to normalize the data
-	data, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
+	var items []any
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Slice {
+		items = make([]any, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			items[i] = rv.Index(i).Interface()
+		}
+	} else {
+		items = []any{v}
 	}
 
-	var items []any
-	if err := json.Unmarshal(data, &items); err != nil {
-		// If it's not an array, wrap it in an array
-		var singleItem any
-		if err := json.Unmarshal(data, &singleItem); err != nil {
-			return nil, err
-		}
-		items = []any{singleItem}
-	}
+	jsonCodec := &qqjson.Codec{}
 
 	var buf bytes.Buffer
 	for i, item := range items {
-		lineData, err := json.Marshal(item)
+		var lineData []byte
+		var err error
+		if util.PreserveKeyOrder {
+			lineData, err = jsonCodec.MarshalCompact(item)
+		} else {
+			lineData, err = json.Marshal(item)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling item %d: %v", i, err)
 		}

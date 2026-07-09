@@ -42,6 +42,21 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 	return marshalJSONOrdered(v, "  ", "")
 }
 
+func (c *Codec) MarshalCompact(v any) ([]byte, error) {
+	if !util.PreserveKeyOrder {
+		var buf bytes.Buffer
+		encoder := json.NewEncoder(&buf)
+		encoder.SetEscapeHTML(false)
+		err := encoder.Encode(v)
+		if err != nil {
+			return nil, err
+		}
+		encodedBytes := bytes.TrimSpace(buf.Bytes())
+		return encodedBytes, nil
+	}
+	return marshalJSONOrdered(v, "", "")
+}
+
 func setInterface(v any, val any) error {
 	switch ptr := v.(type) {
 	case *any:

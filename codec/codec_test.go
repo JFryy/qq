@@ -497,6 +497,21 @@ m: 3
 	if string(marshaledXML) != xmlInput {
 		t.Errorf("XML to XML order not preserved:\n  got: %s\n  want: %s", string(marshaledXML), xmlInput)
 	}
+
+	// Test JSONL key order preservation
+	jsonlInput := `{"z":1,"a":2,"m":3}` + "\n"
+	var valJSONL any
+	if err := Unmarshal([]byte(jsonlInput), JSONL, &valJSONL); err != nil {
+		t.Fatalf("JSONL Unmarshal failed: %v", err)
+	}
+	marshaledJSONL, err := Marshal(valJSONL, JSONL)
+	if err != nil {
+		t.Fatalf("JSONL Marshal failed: %v", err)
+	}
+	expectedPreservedJSONL := `{"z":1,"a":2,"m":3}` + "\n"
+	if string(marshaledJSONL) != expectedPreservedJSONL {
+		t.Errorf("JSONL key order not preserved with flag:\n  got: %q\n  want: %q", string(marshaledJSONL), expectedPreservedJSONL)
+	}
 }
 
 func TestDisableAutoConvert(t *testing.T) {

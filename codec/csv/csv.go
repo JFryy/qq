@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/JFryy/qq/codec/util"
 	"github.com/goccy/go-json"
 )
@@ -113,7 +114,7 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 		return fmt.Errorf("error reading CSV headers: %v", err)
 	}
 
-	var records []map[string]any
+	var records []any
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -134,19 +135,14 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 		records = append(records, rowMap)
 	}
 
-	return setInterface(v, records)
-}
-
-func setInterface(v any, val any) error {
-	switch ptr := v.(type) {
-	case *any:
-		*ptr = val
-		return nil
-	default:
-		b, err := json.Marshal(val)
-		if err != nil {
-			return err
-		}
-		return json.Unmarshal(b, v)
+	jsonCodec := &qqjson.Codec{}
+	jsonData, err := jsonCodec.MarshalCompact(records)
+	if err != nil {
+		return fmt.Errorf("error marshaling to JSON: %v", err)
 	}
+
+	if util.PreserveKeyOrder {
+		return jsonCodec.Unmarshal(jsonData, v)
+	}
+	return json.Unmarshal(jsonData, v)
 }
