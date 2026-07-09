@@ -114,7 +114,7 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 		return fmt.Errorf("error reading CSV headers: %v", err)
 	}
 
-	var records []any
+	records := make([]any, 0)
 	for {
 		record, err := r.Read()
 		if err == io.EOF {

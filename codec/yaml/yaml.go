@@ -2,6 +2,7 @@ package yaml
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"reflect"
@@ -316,6 +317,19 @@ func toYAMLNode(v any) (*yaml.Node, error) {
 	}
 
 	switch val := v.(type) {
+	case json.Number:
+		if _, err := val.Int64(); err == nil {
+			return &yaml.Node{
+				Kind:  yaml.ScalarNode,
+				Tag:   "!!int",
+				Value: val.String(),
+			}, nil
+		}
+		return &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!float",
+			Value: val.String(),
+		}, nil
 	case map[string]any:
 		// Determine key order
 		ptr := uintptr(reflect.ValueOf(val).UnsafePointer())
