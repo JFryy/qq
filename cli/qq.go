@@ -28,7 +28,7 @@ func CreateRootCmd() *cobra.Command {
 	var preserveKeyOrder bool
 	var noAutoConvert bool
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
-	v := "0.3.5-4650e86"
+	v := "0.3.5-7ad8764"
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
 		Use:   "qq [expression] [file] [flags] \n  cat [file] | qq [expression] [flags] \n  qq -I file",

@@ -173,37 +173,71 @@ mango: 3
 }
 
 func TestE2E_DisableAutoConvert(t *testing.T) {
-	csvInput := []byte("status,count\nT,1\nF,0\ntrue,1.5\n")
-
-	// 1. With auto-convert enabled (default)
-	t.Run("default conversion", func(t *testing.T) {
-		got, err := runPipeline(t, csvInput, codec.CSV, codec.JSON, ".[]", false, false)
-		if err != nil {
-			t.Fatalf("pipeline failed: %v", err)
+	// 1. CSV Auto-Coercion
+	t.Run("CSV default vs no-auto-convert", func(t *testing.T) {
+		csvInput := []byte("status,count\nT,1\nF,0\ntrue,1.5\n")
+		
+		gotDefault, _ := runPipeline(t, csvInput, codec.CSV, codec.JSON, ".[]", false, false)
+		expDefault := `{"count":1,"status":true}{"count":0,"status":false}{"count":1.5,"status":true}`
+		if strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(gotDefault), "\n", ""), " ", "") != expDefault {
+			t.Errorf("default got: %q, want: %q", gotDefault, expDefault)
 		}
-		expected := `{"count":1,"status":true}
-{"count":0,"status":false}
-{"count":1.5,"status":true}`
-		trimmedGot := strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(got), "\n", ""), " ", "")
-		trimmedExp := strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(expected), "\n", ""), " ", "")
-		if trimmedGot != trimmedExp {
-			t.Errorf("got:\n%s\nwant:\n%s", trimmedGot, trimmedExp)
+
+		gotDisabled, _ := runPipeline(t, csvInput, codec.CSV, codec.JSON, ".[]", false, true)
+		expDisabled := `{"count":"1","status":"T"}{"count":"0","status":"F"}{"count":"1.5","status":"true"}`
+		if strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(gotDisabled), "\n", ""), " ", "") != expDisabled {
+			t.Errorf("disabled got: %q, want: %q", gotDisabled, expDisabled)
 		}
 	})
 
-	// 2. With --no-auto-convert (coercion disabled)
-	t.Run("no auto convert", func(t *testing.T) {
-		got, err := runPipeline(t, csvInput, codec.CSV, codec.JSON, ".[]", false, true)
-		if err != nil {
-			t.Fatalf("pipeline failed: %v", err)
+	// 2. XML Auto-Coercion
+	t.Run("XML default vs no-auto-convert", func(t *testing.T) {
+		xmlInput := []byte("<root><status>F</status><count>1</count></root>")
+
+		gotDefault, _ := runPipeline(t, xmlInput, codec.XML, codec.JSON, ".", false, false)
+		expDefault := `{"root":{"count":1,"status":false}}`
+		if strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(gotDefault), "\n", ""), " ", "") != expDefault {
+			t.Errorf("default got: %q, want: %q", gotDefault, expDefault)
 		}
-		expected := `{"count":"1","status":"T"}
-{"count":"0","status":"F"}
-{"count":"1.5","status":"true"}`
-		trimmedGot := strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(got), "\n", ""), " ", "")
-		trimmedExp := strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(expected), "\n", ""), " ", "")
-		if trimmedGot != trimmedExp {
-			t.Errorf("got:\n%s\nwant:\n%s", trimmedGot, trimmedExp)
+
+		gotDisabled, _ := runPipeline(t, xmlInput, codec.XML, codec.JSON, ".", false, true)
+		expDisabled := `{"root":{"count":"1","status":"F"}}`
+		if strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(gotDisabled), "\n", ""), " ", "") != expDisabled {
+			t.Errorf("disabled got: %q, want: %q", gotDisabled, expDisabled)
+		}
+	})
+
+	// 3. INI Auto-Coercion
+	t.Run("INI default vs no-auto-convert", func(t *testing.T) {
+		iniInput := []byte("[section]\nstatus=F\ncount=1\n")
+
+		gotDefault, _ := runPipeline(t, iniInput, codec.INI, codec.JSON, ".", false, false)
+		expDefault := `{"section":{"count":1,"status":false}}`
+		if strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(gotDefault), "\n", ""), " ", "") != expDefault {
+			t.Errorf("default got: %q, want: %q", gotDefault, expDefault)
+		}
+
+		gotDisabled, _ := runPipeline(t, iniInput, codec.INI, codec.JSON, ".", false, true)
+		expDisabled := `{"section":{"count":"1","status":"F"}}`
+		if strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(gotDisabled), "\n", ""), " ", "") != expDisabled {
+			t.Errorf("disabled got: %q, want: %q", gotDisabled, expDisabled)
+		}
+	})
+
+	// 4. Gron Auto-Coercion
+	t.Run("Gron default vs no-auto-convert", func(t *testing.T) {
+		gronInput := []byte("json.status = \"F\";\njson.count = 1;\n")
+
+		gotDefault, _ := runPipeline(t, gronInput, codec.GRON, codec.JSON, ".json", false, false)
+		expDefault := `{"count":1,"status":false}`
+		if strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(gotDefault), "\n", ""), " ", "") != expDefault {
+			t.Errorf("default got: %q, want: %q", gotDefault, expDefault)
+		}
+
+		gotDisabled, _ := runPipeline(t, gronInput, codec.GRON, codec.JSON, ".json", false, true)
+		expDisabled := `{"count":"1","status":"F"}`
+		if strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(gotDisabled), "\n", ""), " ", "") != expDisabled {
+			t.Errorf("disabled got: %q, want: %q", gotDisabled, expDisabled)
 		}
 	})
 }
