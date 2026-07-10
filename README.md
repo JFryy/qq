@@ -9,9 +9,9 @@
 
 `qq` is a multi-format transcoder and query tool powered by `jq` syntax. It lets you query and convert between configuration and data formats without needing separate tools for each one.
 
-Supported formats (read/write): `.json`, `.yaml`/`.yml`, `.toml`, `.xml`, `.hcl`/`.tf`, `.csv`, `.tsv`, `.ini`, `.properties`, `.gron`, `.html`, `.jsonl`/`.ndjson`/`.jsonlines`, `.jsonc`, `.parquet`, `.msgpack`/`.mpk`, `.cbor`, `.avro`, `.base64`/`.b64`, `.txt`/`.text`,
+Supported formats (read/write): `.json`, `.yaml`/`.yml`, `.toml`, `.xml`, `.hcl`/`.tf`, `.csv`, `.tsv`, `.ini`, `.properties`, `.gron`, `.html`, `.jsonl`/`.ndjson`/`.jsonlines`, `.jsonc`, `.parquet`, `.msgpack`/`.mpk`, `.cbor`, `.avro`, `.base64`/`.b64`, `.txt`/`.text`, `.env` (flat structure on output),
 
-Read-only: `.proto`, `.env`
+Read-only: `.proto`
 
 ## Transcoding Between Formats
 
@@ -75,9 +75,10 @@ echo '{"active":true}' | qq -e '.active' && echo "is active"
 ```
 
 > [!NOTE]
-> **Preserving Key Order & Disabling Auto-Coercion**:
+> **Key Order, Auto-Coercion, and Raw Strings**:
 > * **`--preserve-key-order` / `-k`**: Preserves the original key/column sequence of structured data (JSON, JSONL, YAML, CSV, TSV, XML) on output, preventing default alphabetical sorting.
 > * **`--no-auto-convert`**: Disables automatic type coercion of strings (like `"T"`, `"F"`, `"1"`, `"0"`, `"true"`) during parsing of CSV, TSV, XML, INI, Gron, and Line formats, keeping them as raw strings.
+> * **`--raw-output` / `-r`**: Outputs strings directly without escaping and surrounding quotes, useful for downstream processing in shell scripts.
 >
 > **Examples:**
 > ```sh
@@ -86,6 +87,9 @@ echo '{"active":true}' | qq -e '.active' && echo "is active"
 >
 > # Query CSV without converting status codes like "F"/"T" to false/true booleans:
 > qq --no-auto-convert -i csv '.' data.csv
+>
+> # Extract a configuration value as a raw string:
+> qq -r '.database.host' config.toml
 > ```
 
 ## Git
