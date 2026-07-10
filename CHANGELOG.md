@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [0.3.5] - Unreleased
+## [0.3.5] - 2026-07-10
 
 ### Added
 - **Key Order Preservation (`--preserve-key-order` / `-k`)**:
@@ -12,11 +12,18 @@ All notable changes to this project will be documented in this file.
   - Custom YAML decoding registers AST mappings and normalizes pointers to guarantee key order preservation.
   - CSV/TSV codecs maintain column sequence matching the original headers on both import and export.
   - XML codecs traverse standard token streams to preserve order of sibling tags.
-  - Added a global memory registry cleanup routine (`ClearKeyOrder()`) at query startup to prevent memory leaks during interactive REPL sessions.
+  - Added an unconditional global memory registry cleanup routine (`ClearKeyOrder()`) at query startup to prevent memory leaks during interactive REPL sessions and module integrations.
 - **Auto-Coercion Disabling (`--no-auto-convert`)**:
   - Disables automatic string conversion during parsing (e.g. converting `"T"`, `"F"`, `"1"`, or `"0"` to booleans/numbers).
   - Supported across CSV, TSV, XML, INI, Gron, and Line formats.
   - Bypasses string trimming and parse routines, offering a significant parsing performance boost.
+- **Interactive Mode Format Decoupling (`--interactive` / `-I`)**:
+  - Always initializes the interactive TUI state buffer using JSON to prevent parsing errors when query prototyping with non-JSON target output formats.
+  - Correctly serializes and formats the final query result to the target output format (e.g. YAML, XML, TOML) on graceful TUI exit.
+- **Cross-Platform Build Detection**:
+  - Added OS detection in `Makefile` to automatically build with the `.exe` extension on Windows hosts, ensuring native shell execution.
+- **Architecture Documentation**:
+  - Authored a comprehensive `ARCHITECTURE.md` file detailing application objectives, design choices, data flow pipelines, compatibility matrices, security audits, and testing structures.
 
 
 ### Testing & Code Quality

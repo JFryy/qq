@@ -1,5 +1,9 @@
 SRC = ./
-BINARY = qq
+ifeq ($(OS),Windows_NT)
+	BINARY = qq.exe
+else
+	BINARY = qq
+endif
 DESTDIR = ~/.local/bin
 
 all: build

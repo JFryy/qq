@@ -240,15 +240,27 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 		os.Exit(exitCode)
 	}
 
-	b, err := codec.Marshal(data, outputCodec)
-	s := string(b)
+	jsonBytes, err := codec.Marshal(data, codec.JSON)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error preparing TUI buffer:", err)
 		os.Exit(1)
 	}
 
-	tui.Interact(s)
-	os.Exit(0)
+	queryExpr, ok := tui.Interact(string(jsonBytes))
+	if !ok {
+		fmt.Println("\033[33mExited without executing query\033[0m")
+		os.Exit(0)
+	}
+
+	query, err := gojq.Parse(queryExpr)
+	if err != nil {
+		fmt.Printf("Error parsing selected jq expression: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("\033[36m# Query: %s\033[0m\n", queryExpr)
+	exitCode := executeQuery(query, data, outputCodec, rawInput, monochrome, exitStatus)
+	os.Exit(exitCode)
 }
 
 func isTerminal(f *os.File) bool {

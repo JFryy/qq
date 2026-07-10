@@ -204,9 +204,7 @@ func IsBinaryFormat(fileType EncodingType) bool {
 
 func SetPreserveKeyOrder(preserve bool) {
 	util.PreserveKeyOrder = preserve
-	if preserve {
-		util.ClearKeyOrder()
-	}
+	util.ClearKeyOrder()
 }
 
 func SetDisableAutoConvert(disable bool) {
