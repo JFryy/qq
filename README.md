@@ -74,6 +74,20 @@ echo -e '{"id":1}\n{"id":2}' | qq -s 'map(.id)'
 echo '{"active":true}' | qq -e '.active' && echo "is active"
 ```
 
+> [!NOTE]
+> **Preserving Key Order & Disabling Auto-Coercion**:
+> * **`--preserve-key-order` / `-k`**: Preserves the original key/column sequence of structured data (JSON, JSONL, YAML, CSV, TSV, XML) on output, preventing default alphabetical sorting.
+> * **`--no-auto-convert`**: Disables automatic type coercion of strings (like `"T"`, `"F"`, `"1"`, `"0"`, `"true"`) during parsing of CSV, TSV, XML, INI, Gron, and Line formats, keeping them as raw strings.
+>
+> **Examples:**
+> ```sh
+> # Transcode CSV to JSON while keeping the exact original column order:
+> qq -k -i csv -o json '.' data.csv
+>
+> # Query CSV without converting status codes like "F"/"T" to false/true booleans:
+> qq --no-auto-convert -i csv '.' data.csv
+> ```
+
 ## Git
 
 You can also use it for cleaner diffing of configuration files by adding to your `git/config` file a snippet such as
