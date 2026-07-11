@@ -218,7 +218,7 @@ func TestE2E_DisableAutoConvert(t *testing.T) {
 	// 1. CSV Auto-Coercion
 	t.Run("CSV default vs no-auto-convert", func(t *testing.T) {
 		csvInput := []byte("status,count\nT,1\nF,0\ntrue,1.5\n")
-		
+
 		gotDefault, _ := runPipeline(t, csvInput, codec.CSV, codec.JSON, ".[]", false, false, false)
 		expDefault := `{"count":1,"status":true}{"count":0,"status":false}{"count":1.5,"status":true}`
 		if strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(gotDefault), "\n", ""), " ", "") != expDefault {

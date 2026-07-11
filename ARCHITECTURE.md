@@ -564,10 +564,12 @@ graph TD
 The project enforces quality validation checks and constructs optimized, static binaries for target platforms.
 
 #### 1. Automated Build
-Automated compilation and local installation are orchestrated via the project `Makefile`:
-```sh
-# Compile the default binary to bin/qq
+Automated compilation and local installation are orchestrated via the project `Makefile`. The `Makefile` dynamically detects the host operating system and compiles the target binary named `qq.exe` on Windows and `qq` on other platforms:
+# Compile the default binary (resolves version dynamically using git)
 make build
+
+# Compile with a specific version override (e.g. for release pipelines)
+make build VERSION=0.3.5-7ad8764
 
 # Compile, test, and copy the binary to ~/.local/bin
 make install
@@ -580,26 +582,22 @@ For manual quality checking, custom targeting, and production cross-compilation,
 Prior to compilation, format the codebase, run static analysis, check for vulnerabilities, and scan for security issues:
 ```sh
 go fmt ./...
-go vet ./...
 golangci-lint run ./... --no-config
 govulncheck ./...
 gosec ./...
 ```
 
 ##### Compilation and Version Injection
-Inject the release version details into `cli/qq.go` and compile static, position-independent executables (PIE) with symbol table and debugging information stripped (`-s -w` flags) for Linux and Windows targets:
+Compile static, position-independent executables (PIE) with symbol table and debugging information stripped (`-s -w` flags), injecting version details directly into the `cli.Version` variable via `-ldflags`:
 ```sh
-# Inject release version and hash
-sed -i "/v :=/s|=.*|= \"<version>-<hash>\"|" cli/qq.go
+# Compile for Linux (AMD64) with version injection
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags "-s -w -X 'github.com/JFryy/qq/cli.Version=<version>'" -trimpath -buildmode=pie -o ./bin/
 
-# Compile for Linux (AMD64)
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags "-s -w" -trimpath -buildmode=pie -o ./bin/
+# Compile for Windows (AMD64) with version injection
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags "-s -w -X 'github.com/JFryy/qq/cli.Version=<version>'" -trimpath -buildmode=pie -o ./bin/
 
-# Compile for Windows (AMD64)
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags "-s -w" -trimpath -buildmode=pie -o ./bin/
-
-# Alternatively, for a simple manual build of the local platform binary:
-go build -o bin/qq main.go
+# Alternatively, for a simple manual build of the local platform binary (defaults to version "dev"):
+go build -o bin/qq
 ```
 
 ### Running the Test Suite
