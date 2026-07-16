@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/goccy/go-json"
+	"github.com/JFryy/qq/codec/util"
 
 	// dedicated codec packages and wrappers where appropriate
 	"github.com/JFryy/qq/codec/avro"
@@ -145,7 +145,7 @@ var (
 )
 
 var Codecs = map[EncodingType]Encoding{
-	JSON:       {json.Unmarshal, jsonCodec.Marshal, []string{"json"}},
+	JSON:       {jsonCodec.Unmarshal, jsonCodec.Marshal, []string{"json"}},
 	YAML:       {yamlCodec.Unmarshal, yamlCodec.Marshal, []string{"yaml", "yml"}},
 	TOML:       {tomlCodec.Unmarshal, tomlCodec.Marshal, []string{"toml"}},
 	HCL:        {hclCodec.Unmarshal, hclCodec.Marshal, []string{"hcl", "tf"}},
@@ -200,4 +200,9 @@ func Marshal(v any, outputFileType EncodingType) ([]byte, error) {
 
 func IsBinaryFormat(fileType EncodingType) bool {
 	return fileType == PARQUET || fileType == MSGPACK || fileType == CBOR || fileType == AVRO
+}
+
+func SetPreserveKeyOrder(preserve bool) {
+	util.PreserveKeyOrder = preserve
+	util.ClearKeyOrder()
 }
