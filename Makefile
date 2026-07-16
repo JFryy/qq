@@ -1,11 +1,16 @@
 SRC = ./
-BINARY = qq
+ifeq ($(OS),Windows_NT)
+	BINARY = qq.exe
+else
+	BINARY = qq
+endif
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 DESTDIR = ~/.local/bin
 
 all: build
 
 build:
-	go build -o bin/$(BINARY) $(SRC)
+	go build -ldflags "-s -w -X 'github.com/JFryy/qq/cli.Version=$(VERSION)'" -o bin/$(BINARY) $(SRC)
 
 test: build
 	./tests/test.sh
