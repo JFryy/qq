@@ -112,7 +112,7 @@ func formatJSONValue(v any) string {
 
 func (c *Codec) setValueJSON(data map[string]any, key string, value any) {
 	parts := strings.Split(key, ".")
-	var m = data
+	m := data
 	for i, part := range parts {
 		if i == len(parts)-1 {
 			if strings.Contains(part, "[") && strings.Contains(part, "]") {

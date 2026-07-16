@@ -2,11 +2,12 @@ package html
 
 import (
 	"bytes"
-	"github.com/goccy/go-json"
-	"golang.org/x/net/html"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/goccy/go-json"
+	"golang.org/x/net/html"
 )
 
 /*

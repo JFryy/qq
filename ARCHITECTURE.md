@@ -615,3 +615,21 @@ Run the bash integration script to verify CLI and format conversions:
 ```sh
 bash tests/test.sh
 ```
+
+---
+
+## Deviations and Enhancements from Upstream (JFryy/qq)
+
+This repository contains several enhancements, feature additions, and bug fixes that distinguish it from the upstream repository at [JFryy/qq](https://github.com/JFryy/qq). These improvements aim to improve configuration layout preservation, prevent data type corruption, decouple interactive query execution, and ease cross-platform compilation.
+
+### Summary of Changes and Justifications
+
+| Feature / Improvement | Description of Changes | Architectural Justification & Reason Why |
+| :--- | :--- | :--- |
+| **Key Order Preservation** (`-k` / `--preserve-key-order`) | Implements a pointer-based registry in [codec/util/order.go](codec/util/order.go) to track the sequence of map keys during unmarshaling. When encoding back to JSON, YAML, XML, CSV, or TSV, keys are marshaled in their original order. | **Justification**: Standard Go maps are non-deterministic and sort keys alphabetically during serialization. For configurations, this rearranges fields, destroying logical grouping and developer formatting. Tracking key addresses ensures output structures remain stable. |
+| **Disable Auto-Coercion** (`--no-auto-convert`) | Bypasses automatic string-to-type parsing (e.g., converting `"true"` or `"1"` to boolean/number) for CSV, TSV, XML, INI, Gron, and Text inputs. | **Justification**: Protects data schema integrity (e.g., preventing zip codes or phone numbers from being parsed into floats). It also optimizes performance by skipping string manipulation and type parsing steps. |
+| **Decoupled Interactive REPL** (`-I` / `--interactive`) | Decouples the live query state buffer inside the interactive TUI from the final output format. The TUI always handles its internal state as JSON, and formats the output to the target format (e.g., YAML, TOML) only on graceful exit. | **Justification**: Upstream coupled the REPL buffer directly to the output codec, leading to parsing errors inside the TUI when query prototyping over non-JSON target types. |
+| **Compiler Version Injection** | Refactored the version injection mechanism to use Go compiler `-ldflags "-X '...Version=$(VERSION)'"` in the `Makefile` rather than mutating source code dynamically using `sed` in CI. | **Justification**: Prevents untracked file modifications during build processes, simplifies packaging, and improves reproducibility across different operating systems. |
+| **Cross-Platform OS Detection** | Dynamically targets `qq.exe` under Windows hosts and `qq` under Unix/macOS within the Makefile build definitions. | **Justification**: Ensures seamless local build execution and native script compatibility for Windows developers. |
+| **Robust Integration Test Coverage** | Added E2E tests in [cli/integration_test.go](cli/integration_test.go) and [tests/test.sh](tests/test.sh) covering format matrix conversions, key order preservation, and coercion bypasses. | **Justification**: Guarantees regression safety and verifies compliance across all 22 format transcoding combinations. |
+

@@ -2,8 +2,9 @@ package tui
 
 import (
 	"fmt"
-	"github.com/goccy/go-json"
 	"strings"
+
+	"github.com/goccy/go-json"
 
 	"github.com/JFryy/qq/codec"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -79,8 +80,12 @@ func generateJqOptions(jsonStr string) []string {
 	extractPaths(jsonData, "", options)
 
 	// Convert map to slice
+	return mapToSlice(options)
+}
+
+func mapToSlice(m map[string]struct{}) []string {
 	var result []string
-	for option := range options {
+	for option := range m {
 		result = append(result, option)
 	}
 	return result

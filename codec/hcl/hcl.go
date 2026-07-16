@@ -2,11 +2,12 @@ package hcl
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/goccy/go-json"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/tmccombs/hcl2json/convert"
 	"github.com/zclconf/go-cty/cty"
-	"log"
 )
 
 type Codec struct{}

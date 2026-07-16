@@ -2,10 +2,11 @@ package ini
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/JFryy/qq/codec/util"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/ini.v1"
-	"strings"
 )
 
 type Codec struct{}

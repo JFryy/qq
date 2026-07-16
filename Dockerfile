@@ -9,4 +9,5 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /qq
 COPY --from=builder /app/bin/qq ./qq
 
+USER non-root
 ENTRYPOINT ["./qq"]

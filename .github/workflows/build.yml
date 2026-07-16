@@ -14,8 +14,8 @@ jobs:
       matrix:
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
-      - uses: wangyoucao577/go-release-action@v1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: wangyoucao577/go-release-action@ec4e3151b3eccfa3527868ba70f60402265fef06 # v1.54
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: linux
@@ -28,8 +28,8 @@ jobs:
       matrix:
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
-      - uses: wangyoucao577/go-release-action@v1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: wangyoucao577/go-release-action@ec4e3151b3eccfa3527868ba70f60402265fef06 # v1.54
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: darwin
@@ -42,8 +42,8 @@ jobs:
       matrix:
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
-      - uses: wangyoucao577/go-release-action@v1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: wangyoucao577/go-release-action@ec4e3151b3eccfa3527868ba70f60402265fef06 # v1.54
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: windows
