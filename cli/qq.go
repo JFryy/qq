@@ -15,6 +15,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Version is the application version, which can be overwritten at build time using ldflags.
+var Version = "dev"
+
 func CreateRootCmd() *cobra.Command {
 	var inputType, outputType string
 	var rawOutput bool
@@ -26,7 +29,7 @@ func CreateRootCmd() *cobra.Command {
 	var slurp bool
 	var exitStatus bool
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
-	v := "v0.3.4"
+	v := Version
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
 		Use:   "qq [expression] [file] [flags] \n  cat [file] | qq [expression] [flags] \n  qq -I file",
