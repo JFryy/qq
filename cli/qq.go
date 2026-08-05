@@ -25,6 +25,7 @@ func CreateRootCmd() *cobra.Command {
 	var stream bool
 	var slurp bool
 	var exitStatus bool
+	var noAutoConvert bool
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
 	v := "v0.3.4"
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
@@ -46,7 +47,7 @@ func CreateRootCmd() *cobra.Command {
 				}
 				os.Exit(0)
 			}
-			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus)
+			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, noAutoConvert)
 		},
 	}
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
@@ -59,11 +60,13 @@ func CreateRootCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&stream, "stream", false, "parse input in streaming fashion, emitting path-value pairs (supports: json, jsonl, yaml, csv, tsv, line)")
 	cmd.Flags().BoolVarP(&slurp, "slurp", "s", false, "read all inputs into an array and use it as the single input value")
 	cmd.Flags().BoolVarP(&exitStatus, "exit-status", "e", false, "set exit status code based on the output")
+	cmd.Flags().BoolVar(&noAutoConvert, "no-auto-convert", false, "disable automatic type coercion of strings during parsing")
 
 	return cmd
 }
 
-func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool) {
+func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, noAutoConvert bool) {
+	codec.SetDisableAutoConvert(noAutoConvert)
 	var input []byte
 	var err error
 	var expression string
