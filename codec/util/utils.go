@@ -6,7 +6,13 @@ import (
 	"time"
 )
 
+// DisableAutoConvert determines if string values in parser codecs are converted automatically.
+var DisableAutoConvert bool
+
 func ParseValue(value string) any {
+	if DisableAutoConvert {
+		return value
+	}
 	value = strings.TrimSpace(value)
 
 	if intValue, err := strconv.Atoi(value); err == nil {

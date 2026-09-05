@@ -7,6 +7,8 @@ import (
 
 	"github.com/goccy/go-json"
 
+	"github.com/JFryy/qq/codec/util"
+
 	// dedicated codec packages and wrappers where appropriate
 	"github.com/JFryy/qq/codec/avro"
 	"github.com/JFryy/qq/codec/base64"
@@ -200,4 +202,8 @@ func Marshal(v any, outputFileType EncodingType) ([]byte, error) {
 
 func IsBinaryFormat(fileType EncodingType) bool {
 	return fileType == PARQUET || fileType == MSGPACK || fileType == CBOR || fileType == AVRO
+}
+
+func SetDisableAutoConvert(disable bool) {
+	util.DisableAutoConvert = disable
 }
