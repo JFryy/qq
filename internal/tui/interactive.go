@@ -2,9 +2,9 @@ package tui
 
 import (
 	"fmt"
-	"github.com/goccy/go-json"
-	"os"
 	"strings"
+
+	"github.com/goccy/go-json"
 
 	"github.com/JFryy/qq/codec"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -80,8 +80,12 @@ func generateJqOptions(jsonStr string) []string {
 	extractPaths(jsonData, "", options)
 
 	// Convert map to slice
+	return mapToSlice(options)
+}
+
+func mapToSlice(m map[string]struct{}) []string {
 	var result []string
-	for option := range options {
+	for option := range m {
 		result = append(result, option)
 	}
 	return result
@@ -213,7 +217,7 @@ func jsonStrToInterface(jsonStr string) (any, error) {
 	var jsonData any
 	err := json.Unmarshal([]byte(jsonStr), &jsonData)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid JSON input: %s", err)
+		return nil, fmt.Errorf("invalid JSON input: %s", err)
 	}
 	return jsonData, nil
 }
@@ -312,30 +316,12 @@ func (m model) View() string {
 	return b.String()
 }
 
-func printOutput(m model) {
-	if m.gracefulExit {
-		// Graceful exit with formatted output
-		s := m.textArea.Value()
-		fmt.Printf("\033[36m# Query: %s\033[0m\n", s)
-		o, err := codec.PrettyFormat(m.jqOutput, codec.JSON, false, false)
-		if err != nil {
-			fmt.Printf("\033[31mError formatting output: %s\033[0m\n", err)
-			os.Exit(1)
-		}
-		fmt.Println(o)
-		os.Exit(0)
-	} else {
-		// Abrupt exit
-		fmt.Println("\033[33mExited without executing query\033[0m")
-		os.Exit(0)
-	}
-}
-
-func Interact(s string) {
+func Interact(s string) (string, bool) {
 	m, err := tea.NewProgram(newModel(s), tea.WithAltScreen()).Run()
 	if err != nil {
 		fmt.Println("Error running program:", err)
-		os.Exit(1)
+		return "", false
 	}
-	printOutput(m.(model))
+	modelState := m.(model)
+	return modelState.textArea.Value(), modelState.gracefulExit
 }
