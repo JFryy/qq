@@ -1,0 +1,110 @@
+name: Release
+
+# Builds a DRAFT GitHub release with binaries and patch notes. Nothing is public
+# until the draft is published, which triggers publish.yml (Homebrew + Docker).
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver component to bump from the latest vX.Y.Z tag"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      notes:
+        description: "Optional highlights, shown above the generated patch notes (Markdown)"
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Releases must be run from main, got ${GITHUB_REF}."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Determine and validate version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          latest="$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)"
+          latest="${latest:-v0.0.0}"
+
+          if [ "$(git rev-list -n1 "$latest" 2>/dev/null)" = "$(git rev-parse HEAD)" ]; then
+            echo "::error::HEAD is already released as $latest. Merge new changes before releasing again."
+            exit 1
+          fi
+
+          IFS=. read -r major minor patch <<< "${latest#v}"
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+          next="v${major}.${minor}.${patch}"
+
+          if ! [[ "$next" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Computed version '$next' is not a valid vX.Y.Z tag."
+            exit 1
+          fi
+
+          # Go requires the module path to end in /vN for major versions >= 2.
+          module="$(go list -m)"
+          if [ "$major" -ge 2 ] && [[ "$module" != */v"$major" ]]; then
+            echo "::error::$next requires the module path to end in /v$major (currently $module). Update go.mod and imports first."
+            exit 1
+          fi
+
+          echo "Releasing $next (previous: $latest)"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Verify version injection
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          make build VERSION="$VERSION"
+          got="$(./bin/qq --version)"
+          if [ "$got" != "qq version $VERSION" ]; then
+            echo "::error::--version printed '$got', expected 'qq version $VERSION'"
+            exit 1
+          fi
+
+      - name: Test
+        run: make test
+
+      # Local tag only: GoReleaser needs it, and GitHub creates the real tag
+      # at the same commit when the draft is published.
+      - name: Tag locally
+        run: git tag "${{ steps.version.outputs.version }}"
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ inputs.notes }}
+
+      - name: Summary
+        run: |
+          echo "Draft release ${{ steps.version.outputs.version }} created. Review and publish it at:" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ github.server_url }}/${{ github.repository }}/releases" >> "$GITHUB_STEP_SUMMARY"

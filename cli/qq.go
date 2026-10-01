@@ -26,7 +26,6 @@ func CreateRootCmd() *cobra.Command {
 	var slurp bool
 	var exitStatus bool
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
-	v := "v0.3.4"
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
 		Use:   "qq [expression] [file] [flags] \n  cat [file] | qq [expression] [flags] \n  qq -I file",
@@ -35,7 +34,7 @@ func CreateRootCmd() *cobra.Command {
 		Long: desc,
 		Run: func(cmd *cobra.Command, args []string) {
 			if version {
-				fmt.Println("qq version", v)
+				fmt.Println("qq version", resolveVersion())
 				os.Exit(0)
 			}
 			if len(args) == 0 && !cmd.Flags().Changed("input") && !cmd.Flags().Changed("output") && !cmd.Flags().Changed("raw-input") && isTerminal(os.Stdin) {

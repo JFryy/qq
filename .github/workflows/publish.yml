@@ -1,0 +1,86 @@
+name: Publish
+
+# Runs when a draft created by release.yml is published. Verifies the release
+# before distributing it to Docker Hub and the Homebrew tap.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Verify tag and binary version
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          fail() {
+            echo "::error::$1"
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=true
+            echo "::error::Release $TAG was reverted to draft. If the tag is wrong, delete it with: git push --delete origin $TAG"
+            exit 1
+          }
+
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Tag '$TAG' is not a valid vX.Y.Z version."
+
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "qq-${TAG}-linux-amd64.tar.gz" --pattern checksums.txt \
+            || fail "Release $TAG is missing qq-${TAG}-linux-amd64.tar.gz or checksums.txt. Was it created by the Release workflow?"
+          sha256sum --check --ignore-missing checksums.txt || fail "Checksum mismatch for release $TAG assets."
+
+          tar -xzf "qq-${TAG}-linux-amd64.tar.gz" qq
+          got="$(./qq --version)"
+          [ "$got" = "qq version $TAG" ] || fail "Released binary reports '$got', expected 'qq version $TAG'."
+
+          echo "version=$TAG" >> "$GITHUB_OUTPUT"
+
+  docker:
+    needs: verify
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      version: ${{ needs.verify.outputs.version }}
+    secrets: inherit
+
+  homebrew:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.version }}
+          path: qq
+
+      - uses: actions/checkout@v4
+        with:
+          repository: JFryy/homebrew-tap
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          path: tap
+
+      - name: Update formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          gh release download "$VERSION" --repo "$GITHUB_REPOSITORY" --pattern checksums.txt
+          ./qq/.github/scripts/homebrew-formula.sh "$VERSION" checksums.txt > tap/Formula/qq.rb
+
+          cd tap
+          if git diff --quiet; then
+            echo "Formula already at $VERSION"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "qq $VERSION"
+          git push

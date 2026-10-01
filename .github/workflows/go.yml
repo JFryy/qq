@@ -12,11 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
-        go-version: '1.25'
+        go-version-file: go.mod
 
     - name: Build
       run: go build -v ./...
@@ -26,3 +28,22 @@ jobs:
 
     - name: MakeTest
       run: time make test
+
+    - name: Verify version injection
+      run: |
+        make build VERSION=v0.0.0-ci
+        test "$(./bin/qq --version)" = "qq version v0.0.0-ci"
+
+    - name: GoReleaser config check
+      uses: goreleaser/goreleaser-action@v6
+      with:
+        distribution: goreleaser
+        version: "~> v2"
+        args: check
+
+    - name: GoReleaser snapshot build
+      uses: goreleaser/goreleaser-action@v6
+      with:
+        distribution: goreleaser
+        version: "~> v2"
+        args: build --snapshot --clean
