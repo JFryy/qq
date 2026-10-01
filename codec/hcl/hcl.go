@@ -2,6 +2,7 @@ package hcl
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -57,11 +58,11 @@ func (c *Codec) populateBody(body *hclwrite.Body, data map[string]any) error {
 			}
 			continue
 		}
-		attribute, err := c.convertToCtyValue(value)
+		attribute, err := c.expressionTokens(value)
 		if err != nil {
 			return fmt.Errorf("attribute %q: %w", key, err)
 		}
-		body.SetAttributeValue(key, attribute)
+		body.SetAttributeRaw(key, attribute)
 	}
 	return nil
 }
@@ -143,8 +144,11 @@ func (c *Codec) convertToCtyValue(value any) (cty.Value, error) {
 	case uint64:
 		return cty.NumberUIntVal(v), nil
 	case float32:
-		return cty.NumberFloatVal(float64(v)), nil
+		return c.convertToCtyValue(float64(v))
 	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return cty.NilVal, fmt.Errorf("non-finite number cannot be represented in HCL: %v", v)
+		}
 		return cty.NumberFloatVal(v), nil
 	case bool:
 		return cty.BoolVal(v), nil
@@ -155,26 +159,6 @@ func (c *Codec) convertToCtyValue(value any) (cty.Value, error) {
 			return cty.NilVal, fmt.Errorf("invalid timestamp: %w", err)
 		}
 		return cty.StringVal(string(text)), nil
-	case []any:
-		tuple := make([]cty.Value, len(v))
-		for i, elem := range v {
-			converted, err := c.convertToCtyValue(elem)
-			if err != nil {
-				return cty.NilVal, fmt.Errorf("element %d: %w", i, err)
-			}
-			tuple[i] = converted
-		}
-		return cty.TupleVal(tuple), nil
-	case map[string]any:
-		vals := make(map[string]cty.Value)
-		for k, elem := range v {
-			converted, err := c.convertToCtyValue(elem)
-			if err != nil {
-				return cty.NilVal, fmt.Errorf("key %q: %w", k, err)
-			}
-			vals[k] = converted
-		}
-		return cty.ObjectVal(vals), nil
 	default:
 		return cty.NilVal, fmt.Errorf("unsupported HCL value type %T", v)
 	}
