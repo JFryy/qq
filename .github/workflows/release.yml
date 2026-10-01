@@ -1,7 +1,7 @@
 name: Release
 
 # Builds a DRAFT GitHub release with binaries and patch notes. Nothing is public
-# until the draft is published, which triggers publish.yml (Homebrew + Docker).
+# until the Publish workflow validates and publishes the draft.
 on:
   workflow_dispatch:
     inputs:
@@ -45,7 +45,7 @@ jobs:
         env:
           BUMP: ${{ inputs.bump }}
         run: |
-          latest="$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)"
+          latest="$(git tag --list 'v*' --sort=-v:refname | awk '/^v[0-9]+\.[0-9]+\.[0-9]+$/ && !found { print; found=1 }')"
           latest="${latest:-v0.0.0}"
 
           if [ "$(git rev-list -n1 "$latest" 2>/dev/null)" = "$(git rev-parse HEAD)" ]; then
@@ -58,6 +58,7 @@ jobs:
             major) major=$((major + 1)); minor=0; patch=0 ;;
             minor) minor=$((minor + 1)); patch=0 ;;
             patch) patch=$((patch + 1)) ;;
+            *) echo "::error::Invalid bump: $BUMP"; exit 1 ;;
           esac
           next="v${major}.${minor}.${patch}"
 
@@ -75,6 +76,7 @@ jobs:
 
           echo "Releasing $next (previous: $latest)"
           echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "previous=$latest" >> "$GITHUB_OUTPUT"
 
       - name: Verify version injection
         env:
@@ -95,16 +97,29 @@ jobs:
       - name: Tag locally
         run: git tag "${{ steps.version.outputs.version }}"
 
+      - name: Generate notes for the build commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PREVIOUS: ${{ steps.version.outputs.previous }}
+          HIGHLIGHTS: ${{ inputs.notes }}
+        run: |
+          args=(-f "tag_name=$VERSION" -f "target_commitish=$GITHUB_SHA" -f "configuration_file_path=.github/release.yml")
+          if [ "$PREVIOUS" != v0.0.0 ]; then
+            args+=(-f "previous_tag_name=$PREVIOUS")
+          fi
+          printf '%s\n\n' "$HIGHLIGHTS" > "$RUNNER_TEMP/release-notes.md"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            "${args[@]}" --jq .body >> "$RUNNER_TEMP/release-notes.md"
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes=${{ runner.temp }}/release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_NOTES: ${{ inputs.notes }}
 
       - name: Summary
         run: |
-          echo "Draft release ${{ steps.version.outputs.version }} created. Review and publish it at:" >> "$GITHUB_STEP_SUMMARY"
-          echo "${{ github.server_url }}/${{ github.repository }}/releases" >> "$GITHUB_STEP_SUMMARY"
+          echo "Draft ${{ steps.version.outputs.version }} created. Review its notes in Releases, then run the Publish workflow with this version. Do not publish directly from the release page." >> "$GITHUB_STEP_SUMMARY"

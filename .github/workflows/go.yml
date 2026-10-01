@@ -34,6 +34,9 @@ jobs:
         make build VERSION=v0.0.0-ci
         test "$(./bin/qq --version)" = "qq version v0.0.0-ci"
 
+    - name: Release validation regression tests
+      run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
+
     - name: GoReleaser config check
       uses: goreleaser/goreleaser-action@v6
       with:

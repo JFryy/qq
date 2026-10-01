@@ -1,64 +1,91 @@
 name: Publish
 
-# Runs when a draft created by release.yml is published. Verifies the release
-# before distributing it to Docker Hub and the Homebrew tap.
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Stable draft version to validate and publish (e.g. v0.3.5); rerun to retry distribution"
+        type: string
+        required: true
 
 permissions:
   contents: write
 
+# Serialize preparation and publication, including all distribution jobs.
 concurrency:
-  group: publish-${{ github.event.release.tag_name }}
+  group: release
   cancel-in-progress: false
 
 jobs:
-  verify:
+  publish:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check.outputs.version }}
     steps:
-      - name: Verify tag and binary version
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Publish must run from main."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Validate release metadata and all assets before publication
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ inputs.version }}
         run: |
-          fail() {
-            echo "::error::$1"
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=true
-            echo "::error::Release $TAG was reverted to draft. If the tag is wrong, delete it with: git push --delete origin $TAG"
+          [[ "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
+            echo "::error::Expected a stable vX.Y.Z version."
             exit 1
           }
+          assets="$RUNNER_TEMP/release-assets"
+          mkdir -p "$assets"
+          gh release view "$VERSION" --json databaseId,tagName,isDraft,isPrerelease,targetCommitish,assets \
+            --jq 'del(.assets[].downloadCount)' > "$RUNNER_TEMP/release.json"
+          python3 .github/scripts/validate-release.py "$VERSION" "$RUNNER_TEMP/release.json" "$assets" --metadata-only
+          gh release download "$VERSION" --dir "$assets"
+          python3 .github/scripts/validate-release.py "$VERSION" "$RUNNER_TEMP/release.json" "$assets"
+          .github/scripts/homebrew-formula.sh "$VERSION" "$assets/checksums.txt" > "$RUNNER_TEMP/qq.rb"
+          ruby -c "$RUNNER_TEMP/qq.rb"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Tag '$TAG' is not a valid vX.Y.Z version."
-
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
-            --pattern "qq-${TAG}-linux-amd64.tar.gz" --pattern checksums.txt \
-            || fail "Release $TAG is missing qq-${TAG}-linux-amd64.tar.gz or checksums.txt. Was it created by the Release workflow?"
-          sha256sum --check --ignore-missing checksums.txt || fail "Checksum mismatch for release $TAG assets."
-
-          tar -xzf "qq-${TAG}-linux-amd64.tar.gz" qq
-          got="$(./qq --version)"
-          [ "$got" = "qq version $TAG" ] || fail "Released binary reports '$got', expected 'qq version $TAG'."
-
-          echo "version=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Publish validated draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          # Recheck metadata and tag order in case someone edited the draft during validation.
+          gh release view "$VERSION" --json databaseId,tagName,isDraft,isPrerelease,targetCommitish,assets \
+            --jq 'del(.assets[].downloadCount)' > "$RUNNER_TEMP/current-release.json"
+          cmp "$RUNNER_TEMP/release.json" "$RUNNER_TEMP/current-release.json"
+          git fetch origin main --tags
+          python3 .github/scripts/validate-release.py "$VERSION" "$RUNNER_TEMP/release.json" "$RUNNER_TEMP/release-assets" --metadata-only
+          if [ "$(jq -r .isDraft "$RUNNER_TEMP/release.json")" = true ]; then
+            id="$(jq -r .databaseId "$RUNNER_TEMP/release.json")"
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$id" -F draft=false -f make_latest=true
+          fi
 
   docker:
-    needs: verify
+    needs: publish
     uses: ./.github/workflows/docker-image.yml
     with:
-      version: ${{ needs.verify.outputs.version }}
+      version: ${{ needs.publish.outputs.version }}
     secrets: inherit
 
   homebrew:
-    needs: verify
+    needs: publish
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify.outputs.version }}
           path: qq
 
       - uses: actions/checkout@v4
@@ -70,10 +97,11 @@ jobs:
       - name: Update formula
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.verify.outputs.version }}
+          VERSION: ${{ needs.publish.outputs.version }}
         run: |
           gh release download "$VERSION" --repo "$GITHUB_REPOSITORY" --pattern checksums.txt
           ./qq/.github/scripts/homebrew-formula.sh "$VERSION" checksums.txt > tap/Formula/qq.rb
+          ruby -c tap/Formula/qq.rb
 
           cd tap
           if git diff --quiet; then

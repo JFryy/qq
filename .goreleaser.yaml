@@ -11,8 +11,8 @@ builds:
       - CGO_ENABLED=0
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
-    flags:
-      - -trimpath
+    # Do not use -trimpath: Go omits linker flags from build info with it enabled.
+    # Publication checks these flags in every platform's binary.
     ldflags:
       - -s -w -X github.com/JFryy/qq/cli.Version={{ .Tag }}
 
@@ -31,13 +31,12 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
-# Patch notes come from GitHub's generated release notes, categorised by .github/release.yml.
+# The workflow supplies GitHub notes pinned to the build commit.
 changelog:
-  use: github-native
+  use: git
 
 release:
   draft: true
   replace_existing_draft: true
   # The tag is not pushed before the draft exists; GitHub creates it at this commit on publish.
   target_commitish: "{{ .FullCommit }}"
-  header: '{{ envOrDefault "RELEASE_NOTES" "" }}'
