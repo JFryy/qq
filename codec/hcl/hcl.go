@@ -2,6 +2,8 @@ package hcl
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/goccy/go-json"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/tmccombs/hcl2json/convert"
@@ -122,12 +124,37 @@ func (c *Codec) convertToCtyValue(value any) (cty.Value, error) {
 		return cty.StringVal(v), nil
 	case int:
 		return cty.NumberIntVal(int64(v)), nil
+	case int8:
+		return cty.NumberIntVal(int64(v)), nil
+	case int16:
+		return cty.NumberIntVal(int64(v)), nil
+	case int32:
+		return cty.NumberIntVal(int64(v)), nil
 	case int64:
 		return cty.NumberIntVal(v), nil
+	case uint:
+		return cty.NumberUIntVal(uint64(v)), nil
+	case uint8:
+		return cty.NumberUIntVal(uint64(v)), nil
+	case uint16:
+		return cty.NumberUIntVal(uint64(v)), nil
+	case uint32:
+		return cty.NumberUIntVal(uint64(v)), nil
+	case uint64:
+		return cty.NumberUIntVal(v), nil
+	case float32:
+		return cty.NumberFloatVal(float64(v)), nil
 	case float64:
 		return cty.NumberFloatVal(v), nil
 	case bool:
 		return cty.BoolVal(v), nil
+	case time.Time:
+		// HCL has no timestamp type; match the timestamp's JSON representation.
+		text, err := v.MarshalText()
+		if err != nil {
+			return cty.NilVal, fmt.Errorf("invalid timestamp: %w", err)
+		}
+		return cty.StringVal(string(text)), nil
 	case []any:
 		tuple := make([]cty.Value, len(v))
 		for i, elem := range v {
