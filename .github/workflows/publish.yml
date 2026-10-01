@@ -1,0 +1,114 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Stable draft version to validate and publish (e.g. v0.3.5); rerun to retry distribution"
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+# Serialize preparation and publication, including all distribution jobs.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Publish must run from main."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Validate release metadata and all assets before publication
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          [[ "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
+            echo "::error::Expected a stable vX.Y.Z version."
+            exit 1
+          }
+          assets="$RUNNER_TEMP/release-assets"
+          mkdir -p "$assets"
+          gh release view "$VERSION" --json databaseId,tagName,isDraft,isPrerelease,targetCommitish,assets \
+            --jq 'del(.assets[].downloadCount)' > "$RUNNER_TEMP/release.json"
+          python3 .github/scripts/validate-release.py "$VERSION" "$RUNNER_TEMP/release.json" "$assets" --metadata-only
+          gh release download "$VERSION" --dir "$assets"
+          python3 .github/scripts/validate-release.py "$VERSION" "$RUNNER_TEMP/release.json" "$assets"
+          .github/scripts/homebrew-formula.sh "$VERSION" "$assets/checksums.txt" > "$RUNNER_TEMP/qq.rb"
+          ruby -c "$RUNNER_TEMP/qq.rb"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Publish validated draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          # Recheck metadata and tag order in case someone edited the draft during validation.
+          gh release view "$VERSION" --json databaseId,tagName,isDraft,isPrerelease,targetCommitish,assets \
+            --jq 'del(.assets[].downloadCount)' > "$RUNNER_TEMP/current-release.json"
+          cmp "$RUNNER_TEMP/release.json" "$RUNNER_TEMP/current-release.json"
+          git fetch origin main --tags
+          python3 .github/scripts/validate-release.py "$VERSION" "$RUNNER_TEMP/release.json" "$RUNNER_TEMP/release-assets" --metadata-only
+          if [ "$(jq -r .isDraft "$RUNNER_TEMP/release.json")" = true ]; then
+            id="$(jq -r .databaseId "$RUNNER_TEMP/release.json")"
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$id" -F draft=false -f make_latest=true
+          fi
+
+  docker:
+    needs: publish
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets: inherit
+
+  homebrew:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: qq
+
+      - uses: actions/checkout@v4
+        with:
+          repository: JFryy/homebrew-tap
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          path: tap
+
+      - name: Update formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          gh release download "$VERSION" --repo "$GITHUB_REPOSITORY" --pattern checksums.txt
+          ./qq/.github/scripts/homebrew-formula.sh "$VERSION" checksums.txt > tap/Formula/qq.rb
+          ruby -c tap/Formula/qq.rb
+
+          cd tap
+          if git diff --quiet; then
+            echo "Formula already at $VERSION"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "qq $VERSION"
+          git push

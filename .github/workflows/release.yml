@@ -1,0 +1,125 @@
+name: Release
+
+# Builds a DRAFT GitHub release with binaries and patch notes. Nothing is public
+# until the Publish workflow validates and publishes the draft.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver component to bump from the latest vX.Y.Z tag"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      notes:
+        description: "Optional highlights, shown above the generated patch notes (Markdown)"
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Releases must be run from main, got ${GITHUB_REF}."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Determine and validate version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          latest="$(git tag --list 'v*' --sort=-v:refname | awk '/^v[0-9]+\.[0-9]+\.[0-9]+$/ && !found { print; found=1 }')"
+          latest="${latest:-v0.0.0}"
+
+          if [ "$(git rev-list -n1 "$latest" 2>/dev/null)" = "$(git rev-parse HEAD)" ]; then
+            echo "::error::HEAD is already released as $latest. Merge new changes before releasing again."
+            exit 1
+          fi
+
+          IFS=. read -r major minor patch <<< "${latest#v}"
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+            *) echo "::error::Invalid bump: $BUMP"; exit 1 ;;
+          esac
+          next="v${major}.${minor}.${patch}"
+
+          if ! [[ "$next" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Computed version '$next' is not a valid vX.Y.Z tag."
+            exit 1
+          fi
+
+          # Go requires the module path to end in /vN for major versions >= 2.
+          module="$(go list -m)"
+          if [ "$major" -ge 2 ] && [[ "$module" != */v"$major" ]]; then
+            echo "::error::$next requires the module path to end in /v$major (currently $module). Update go.mod and imports first."
+            exit 1
+          fi
+
+          echo "Releasing $next (previous: $latest)"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "previous=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Verify version injection
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          make build VERSION="$VERSION"
+          got="$(./bin/qq --version)"
+          if [ "$got" != "qq version $VERSION" ]; then
+            echo "::error::--version printed '$got', expected 'qq version $VERSION'"
+            exit 1
+          fi
+
+      - name: Test
+        run: make test
+
+      # Local tag only: GoReleaser needs it, and GitHub creates the real tag
+      # at the same commit when the draft is published.
+      - name: Tag locally
+        run: git tag "${{ steps.version.outputs.version }}"
+
+      - name: Generate notes for the build commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PREVIOUS: ${{ steps.version.outputs.previous }}
+          HIGHLIGHTS: ${{ inputs.notes }}
+        run: |
+          args=(-f "tag_name=$VERSION" -f "target_commitish=$GITHUB_SHA" -f "configuration_file_path=.github/release.yml")
+          if [ "$PREVIOUS" != v0.0.0 ]; then
+            args+=(-f "previous_tag_name=$PREVIOUS")
+          fi
+          printf '%s\n\n' "$HIGHLIGHTS" > "$RUNNER_TEMP/release-notes.md"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            "${args[@]}" --jq .body >> "$RUNNER_TEMP/release-notes.md"
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean --release-notes=${{ runner.temp }}/release-notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "Draft ${{ steps.version.outputs.version }} created. Review its notes in Releases, then run the Publish workflow with this version. Do not publish directly from the release page." >> "$GITHUB_STEP_SUMMARY"
