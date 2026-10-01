@@ -2,6 +2,7 @@ package toml
 
 import (
 	"math"
+	"math/big"
 
 	"github.com/BurntSushi/toml"
 )
@@ -9,7 +10,44 @@ import (
 type Codec struct{}
 
 func (c Codec) Unmarshal(data []byte, v any) error {
-	return toml.Unmarshal(data, v)
+	if err := toml.Unmarshal(data, v); err != nil {
+		return err
+	}
+	// Preserve explicitly typed destinations, but make generic values queryable.
+	switch ptr := v.(type) {
+	case *any:
+		*ptr = normalizeQueryValues(*ptr)
+	case *map[string]any:
+		normalizeQueryValues(*ptr)
+	}
+	return nil
+}
+
+// normalizeQueryValues converts generic TOML containers and integers to gojq
+// types without a JSON round-trip, which could lose integer precision.
+func normalizeQueryValues(value any) any {
+	switch v := value.(type) {
+	case int64:
+		if n := int(v); int64(n) == v {
+			return n
+		}
+		return big.NewInt(v)
+	case map[string]any:
+		for key, item := range v {
+			v[key] = normalizeQueryValues(item)
+		}
+	case []map[string]any:
+		items := make([]any, len(v))
+		for i, item := range v {
+			items[i] = normalizeQueryValues(item)
+		}
+		return items
+	case []any:
+		for i, item := range v {
+			v[i] = normalizeQueryValues(item)
+		}
+	}
+	return value
 }
 
 // Marshal serializes v as TOML. JSON-derived inputs encode all numbers as
