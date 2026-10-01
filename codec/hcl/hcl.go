@@ -2,11 +2,13 @@ package hcl
 
 import (
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/goccy/go-json"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/tmccombs/hcl2json/convert"
 	"github.com/zclconf/go-cty/cty"
-	"log"
 )
 
 type Codec struct{}
@@ -42,76 +44,122 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 func (c *Codec) convertMapToHCL(data map[string]any) ([]byte, error) {
 	f := hclwrite.NewEmptyFile()
 	rootBody := f.Body()
-	c.populateBody(rootBody, data)
+	if err := c.populateBody(rootBody, data); err != nil {
+		return nil, err
+	}
 	return f.Bytes(), nil
 }
 
-func (c *Codec) populateBody(body *hclwrite.Body, data map[string]any) {
+func (c *Codec) populateBody(body *hclwrite.Body, data map[string]any) error {
 	for key, value := range data {
-		switch v := value.(type) {
-		case map[string]any:
-			block := body.AppendNewBlock(key, nil)
-			c.populateBody(block.Body(), v)
-
-		case []any:
-			if len(v) == 1 {
-				if singleMap, ok := v[0].(map[string]any); ok {
-					block := body.AppendNewBlock(key, nil)
-					c.populateBody(block.Body(), singleMap)
-					continue
-				}
+		if isBlockValue(value) {
+			if err := c.appendBlocks(body, key, nil, value); err != nil {
+				return fmt.Errorf("block %q: %w", key, err)
 			}
-			if len(v) == 0 {
-				continue
-			}
-			tuple := make([]cty.Value, len(v))
-			for i, elem := range v {
-				tuple[i] = c.convertToCtyValue(elem)
-			}
-			body.SetAttributeValue(key, cty.TupleVal(tuple))
-
-		case string:
-			body.SetAttributeValue(key, cty.StringVal(v))
-		case int:
-			body.SetAttributeValue(key, cty.NumberIntVal(int64(v)))
-		case int64:
-			body.SetAttributeValue(key, cty.NumberIntVal(v))
-		case float64:
-			body.SetAttributeValue(key, cty.NumberFloatVal(v))
-		case bool:
-			body.SetAttributeValue(key, cty.BoolVal(v))
-		default:
-			log.Printf("Unsupported type: %T", v)
+			continue
 		}
+		attribute, err := c.expressionTokens(value)
+		if err != nil {
+			return fmt.Errorf("attribute %q: %w", key, err)
+		}
+		body.SetAttributeRaw(key, attribute)
+	}
+	return nil
+}
+
+// isBlockValue recognizes hcl2json's block convention: nonempty arrays of
+// objects, optionally nested beneath label keys. JSON alone cannot distinguish
+// these from object-list attributes, so ambiguous values follow that convention.
+func isBlockValue(value any) bool {
+	switch v := value.(type) {
+	case []any:
+		if len(v) == 0 {
+			return false
+		}
+		for _, item := range v {
+			if _, ok := item.(map[string]any); !ok {
+				return false
+			}
+		}
+		return true
+	case map[string]any:
+		if len(v) == 0 {
+			return false
+		}
+		for _, item := range v {
+			if !isBlockValue(item) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
 	}
 }
 
-func (c *Codec) convertToCtyValue(value any) cty.Value {
+// appendBlocks restores block labels and repeated bodies from hcl2json values.
+func (c *Codec) appendBlocks(body *hclwrite.Body, name string, labels []string, value any) error {
 	switch v := value.(type) {
-	case string:
-		return cty.StringVal(v)
-	case int:
-		return cty.NumberIntVal(int64(v))
-	case int64:
-		return cty.NumberIntVal(v)
-	case float64:
-		return cty.NumberFloatVal(v)
-	case bool:
-		return cty.BoolVal(v)
-	case []any:
-		tuple := make([]cty.Value, len(v))
-		for i, elem := range v {
-			tuple[i] = c.convertToCtyValue(elem)
-		}
-		return cty.TupleVal(tuple)
 	case map[string]any:
-		vals := make(map[string]cty.Value)
-		for k, elem := range v {
-			vals[k] = c.convertToCtyValue(elem)
+		for label, item := range v {
+			if err := c.appendBlocks(body, name, append(labels, label), item); err != nil {
+				return err
+			}
 		}
-		return cty.ObjectVal(vals)
+	case []any:
+		for _, item := range v {
+			block := body.AppendNewBlock(name, labels)
+			if err := c.populateBody(block.Body(), item.(map[string]any)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Codec) convertToCtyValue(value any) (cty.Value, error) {
+	switch v := value.(type) {
+	case nil:
+		return cty.NullVal(cty.DynamicPseudoType), nil
+	case string:
+		return cty.StringVal(v), nil
+	case int:
+		return cty.NumberIntVal(int64(v)), nil
+	case int8:
+		return cty.NumberIntVal(int64(v)), nil
+	case int16:
+		return cty.NumberIntVal(int64(v)), nil
+	case int32:
+		return cty.NumberIntVal(int64(v)), nil
+	case int64:
+		return cty.NumberIntVal(v), nil
+	case uint:
+		return cty.NumberUIntVal(uint64(v)), nil
+	case uint8:
+		return cty.NumberUIntVal(uint64(v)), nil
+	case uint16:
+		return cty.NumberUIntVal(uint64(v)), nil
+	case uint32:
+		return cty.NumberUIntVal(uint64(v)), nil
+	case uint64:
+		return cty.NumberUIntVal(v), nil
+	case float32:
+		return c.convertToCtyValue(float64(v))
+	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return cty.NilVal, fmt.Errorf("non-finite number cannot be represented in HCL: %v", v)
+		}
+		return cty.NumberFloatVal(v), nil
+	case bool:
+		return cty.BoolVal(v), nil
+	case time.Time:
+		// HCL has no timestamp type; match the timestamp's JSON representation.
+		text, err := v.MarshalText()
+		if err != nil {
+			return cty.NilVal, fmt.Errorf("invalid timestamp: %w", err)
+		}
+		return cty.StringVal(string(text)), nil
 	default:
-		log.Printf("Unsupported type: %T", v)
-		return cty.NilVal
+		return cty.NilVal, fmt.Errorf("unsupported HCL value type %T", v)
 	}
 }
