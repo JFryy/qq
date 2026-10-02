@@ -3,7 +3,9 @@ package env
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/goccy/go-json"
@@ -45,8 +47,8 @@ func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	}
 
 	var lines []string
-	for key, value := range envVars {
-		lines = append(lines, fmt.Sprintf("%s=%s", key, c.formatValue(value)))
+	for _, key := range slices.Sorted(maps.Keys(envVars)) {
+		lines = append(lines, fmt.Sprintf("%s=%s", key, c.formatValue(envVars[key])))
 	}
 
 	return []byte(strings.Join(lines, "\n")), nil

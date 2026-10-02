@@ -2,10 +2,12 @@ package hcl
 
 import (
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"time"
 
-	"github.com/goccy/go-json"
+	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/tmccombs/hcl2json/convert"
 	"github.com/zclconf/go-cty/cty"
@@ -19,7 +21,7 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 	if err != nil {
 		return fmt.Errorf("error converting HCL to JSON: %v", err)
 	}
-	return json.Unmarshal(content, v)
+	return qqjson.Unmarshal(content, v)
 }
 
 func (c *Codec) Marshal(v any) ([]byte, error) {
@@ -51,7 +53,8 @@ func (c *Codec) convertMapToHCL(data map[string]any) ([]byte, error) {
 }
 
 func (c *Codec) populateBody(body *hclwrite.Body, data map[string]any) error {
-	for key, value := range data {
+	for _, key := range slices.Sorted(maps.Keys(data)) {
+		value := data[key]
 		if isBlockValue(value) {
 			if err := c.appendBlocks(body, key, nil, value); err != nil {
 				return fmt.Errorf("block %q: %w", key, err)
@@ -101,8 +104,8 @@ func isBlockValue(value any) bool {
 func (c *Codec) appendBlocks(body *hclwrite.Body, name string, labels []string, value any) error {
 	switch v := value.(type) {
 	case map[string]any:
-		for label, item := range v {
-			if err := c.appendBlocks(body, name, append(labels, label), item); err != nil {
+		for _, label := range slices.Sorted(maps.Keys(v)) {
+			if err := c.appendBlocks(body, name, append(labels, label), v[label]); err != nil {
 				return err
 			}
 		}

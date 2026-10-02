@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/goccy/go-json"
 )
 
@@ -33,7 +34,7 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 		}
 
 		var obj any
-		if err := json.Unmarshal([]byte(line), &obj); err != nil {
+		if err := qqjson.Unmarshal([]byte(line), &obj); err != nil {
 			return fmt.Errorf("error parsing JSON on line %d: %v", lineNum, err)
 		}
 		result = append(result, obj)
@@ -41,6 +42,16 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("error reading JSONL: %v", err)
+	}
+
+	// A JSON round trip would turn integers back into float64.
+	if ptr, ok := v.(*any); ok {
+		if result == nil {
+			*ptr = nil
+		} else {
+			*ptr = result
+		}
+		return nil
 	}
 
 	// Marshal and unmarshal through JSON to convert to target type
@@ -60,14 +71,13 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 		return nil, err
 	}
 
-	var items []any
-	if err := json.Unmarshal(data, &items); err != nil {
-		// If it's not an array, wrap it in an array
-		var singleItem any
-		if err := json.Unmarshal(data, &singleItem); err != nil {
-			return nil, err
-		}
-		items = []any{singleItem}
+	var decoded any
+	if err := qqjson.Unmarshal(data, &decoded); err != nil {
+		return nil, err
+	}
+	items, ok := decoded.([]any)
+	if !ok && decoded != nil {
+		items = []any{decoded}
 	}
 
 	var buf bytes.Buffer

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 
+	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/goccy/go-json"
 )
 
@@ -23,7 +24,7 @@ func (c *Codec) Unmarshal(data []byte, v interface{}) error {
 	}
 
 	// Parse decoded data as JSON
-	return json.Unmarshal(decoded, v)
+	return qqjson.Unmarshal(decoded, v)
 }
 
 // Marshal converts data to JSON and encodes as base64

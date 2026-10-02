@@ -5,8 +5,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/goccy/go-json"
-
 	// dedicated codec packages and wrappers where appropriate
 	"github.com/JFryy/qq/codec/avro"
 	"github.com/JFryy/qq/codec/base64"
@@ -145,7 +143,7 @@ var (
 )
 
 var Codecs = map[EncodingType]Encoding{
-	JSON:       {json.Unmarshal, jsonCodec.Marshal, []string{"json"}},
+	JSON:       {jsonCodec.Unmarshal, jsonCodec.Marshal, []string{"json"}},
 	YAML:       {yamlCodec.Unmarshal, yamlCodec.Marshal, []string{"yaml", "yml"}},
 	TOML:       {tomlCodec.Unmarshal, tomlCodec.Marshal, []string{"toml"}},
 	HCL:        {hclCodec.Unmarshal, hclCodec.Marshal, []string{"hcl", "tf"}},
