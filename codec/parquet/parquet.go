@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"maps"
 	"reflect"
+	"slices"
 
 	"github.com/apache/arrow/go/v16/arrow"
 	"github.com/apache/arrow/go/v16/arrow/array"
@@ -37,7 +39,7 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 	mem := memory.NewGoAllocator()
 	var fields []arrow.Field
 
-	for key := range firstElemValue {
+	for _, key := range slices.Sorted(maps.Keys(firstElemValue)) {
 		fields = append(fields, arrow.Field{Name: key, Type: arrow.BinaryTypes.String, Nullable: true})
 	}
 

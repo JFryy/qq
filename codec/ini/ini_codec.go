@@ -5,6 +5,8 @@ import (
 	"github.com/JFryy/qq/codec/util"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/ini.v1"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -40,7 +42,8 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 	cfg := ini.Empty()
 	defaultSection := cfg.Section("")
 
-	for section, sectionValue := range data {
+	for _, section := range slices.Sorted(maps.Keys(data)) {
+		sectionValue := data[section]
 		sectionMap, ok := sectionValue.(map[string]any)
 		if !ok {
 			// Handle scalar values by putting them in the default section
@@ -62,7 +65,8 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 			return nil, err
 		}
 
-		for key, value := range sectionMap {
+		for _, key := range slices.Sorted(maps.Keys(sectionMap)) {
+			value := sectionMap[key]
 			var valueStr string
 			if value == nil {
 				valueStr = ""

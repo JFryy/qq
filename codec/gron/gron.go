@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -36,7 +37,9 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 			isArray = true
 		}
 
-		c.setValueJSON(dataMap, key, parsedValue)
+		if err := c.setValueJSON(dataMap, key, parsedValue); err != nil {
+			return fmt.Errorf("invalid gron line %q: %w", line, err)
+		}
 	}
 
 	if isArray && len(dataMap) == 1 {
@@ -70,7 +73,11 @@ func (c *Codec) traverseJSON(prefix string, v any, buf *bytes.Buffer) {
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 	case reflect.Map:
-		for _, key := range rv.MapKeys() {
+		keys := rv.MapKeys()
+		sort.Slice(keys, func(i, j int) bool {
+			return fmt.Sprint(keys[i]) < fmt.Sprint(keys[j])
+		})
+		for _, key := range keys {
 			strKey := fmt.Sprintf("%v", key)
 			c.traverseJSON(addPrefix(prefix, strKey), rv.MapIndex(key).Interface(), buf)
 		}
@@ -110,59 +117,67 @@ func formatJSONValue(v any) string {
 	}
 }
 
-func (c *Codec) setValueJSON(data map[string]any, key string, value any) {
+func (c *Codec) setValueJSON(data map[string]any, key string, value any) error {
 	parts := strings.Split(key, ".")
-	var m = data
+	m := data
 	for i, part := range parts {
-		if i == len(parts)-1 {
-			if strings.Contains(part, "[") && strings.Contains(part, "]") {
-				k := strings.Split(part, "[")[0]
-				index := parseArrayIndex(part)
-				if _, ok := m[k]; !ok {
-					m[k] = make([]any, index+1)
-				}
-				arr := m[k].([]any)
-				if len(arr) <= index {
-					for len(arr) <= index {
-						arr = append(arr, nil)
-					}
-					m[k] = arr
-				}
-				arr[index] = value
-			} else {
+		last := i == len(parts)-1
+		if !strings.Contains(part, "[") || !strings.Contains(part, "]") {
+			if last {
 				m[part] = value
+				return nil
 			}
-		} else {
-			// fix index assignment nested map: this is needs optimization
-			if strings.Contains(part, "[") && strings.Contains(part, "]") {
-				k := strings.Split(part, "[")[0]
-				index := parseArrayIndex(part)
-				if _, ok := m[k]; !ok {
-					m[k] = make([]any, index+1)
-				}
-				arr := m[k].([]any)
-				if len(arr) <= index {
-					for len(arr) <= index {
-						arr = append(arr, nil)
-					}
-					m[k] = arr
-				}
-				if arr[index] == nil {
-					arr[index] = make(map[string]any)
-				}
-				m = arr[index].(map[string]any)
-			} else {
-				if _, ok := m[part]; !ok {
-					m[part] = make(map[string]any)
-				}
-				m = m[part].(map[string]any)
+			if _, ok := m[part]; !ok {
+				m[part] = make(map[string]any)
 			}
+			next, ok := m[part].(map[string]any)
+			if !ok {
+				return fmt.Errorf("%q is assigned both a value and nested fields", part)
+			}
+			m = next
+			continue
 		}
+
+		k := strings.Split(part, "[")[0]
+		index, err := parseArrayIndex(part)
+		if err != nil {
+			return err
+		}
+		if _, ok := m[k]; !ok {
+			m[k] = make([]any, index+1)
+		}
+		arr, ok := m[k].([]any)
+		if !ok {
+			return fmt.Errorf("%q is assigned both a value and array elements", k)
+		}
+		for len(arr) <= index {
+			arr = append(arr, nil)
+		}
+		m[k] = arr
+		if last {
+			arr[index] = value
+			return nil
+		}
+		if arr[index] == nil {
+			arr[index] = make(map[string]any)
+		}
+		next, ok := arr[index].(map[string]any)
+		if !ok {
+			return fmt.Errorf("%s is assigned both a value and nested fields", part)
+		}
+		m = next
 	}
+	return nil
 }
 
-func parseArrayIndex(part string) int {
-	indexStr := strings.Trim(part[strings.Index(part, "[")+1:strings.Index(part, "]")], " ")
-	index, _ := strconv.Atoi(indexStr)
-	return index
+func parseArrayIndex(part string) (int, error) {
+	open, end := strings.Index(part, "["), strings.Index(part, "]")
+	if end < open {
+		return 0, fmt.Errorf("invalid array index in %q", part)
+	}
+	index, err := strconv.Atoi(strings.TrimSpace(part[open+1 : end]))
+	if err != nil || index < 0 {
+		return 0, fmt.Errorf("invalid array index in %q", part)
+	}
+	return index, nil
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/JFryy/qq/codec"
+	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/JFryy/qq/internal/tui"
 	"github.com/goccy/go-json"
 	"github.com/itchyny/gojq"
@@ -326,6 +327,7 @@ func slurpInputs(input []byte, inputCodec codec.EncodingType) (any, error) {
 	case codec.JSON:
 		// JSON can have multiple whitespace-separated values
 		decoder := json.NewDecoder(bytes.NewReader(input))
+		decoder.UseNumber()
 		for {
 			var value any
 			if err := decoder.Decode(&value); err != nil {
@@ -334,7 +336,11 @@ func slurpInputs(input []byte, inputCodec codec.EncodingType) (any, error) {
 				}
 				return nil, fmt.Errorf("error parsing JSON: %v", err)
 			}
-			values = append(values, value)
+			normalized, err := qqjson.NormalizeNumbers(value)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing JSON: %v", err)
+			}
+			values = append(values, normalized)
 		}
 
 	case codec.JSONL:
