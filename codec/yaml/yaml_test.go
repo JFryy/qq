@@ -547,3 +547,29 @@ name: doc2`
 		}
 	}
 }
+
+func TestYAMLNonStringKeys(t *testing.T) {
+	yamlData := []byte(`test:
+  200: what
+  1.5: float
+  true: bool
+  null: none
+`)
+
+	codec := &Codec{}
+	var result any
+	if err := codec.Unmarshal(yamlData, &result); err != nil {
+		t.Fatalf("Unmarshal failed: %v", err)
+	}
+
+	test, ok := result.(map[string]any)["test"].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected test to be map[string]any, got %T", result.(map[string]any)["test"])
+	}
+	expected := map[string]string{"200": "what", "1.5": "float", "true": "bool", "null": "none"}
+	for key, value := range expected {
+		if test[key] != value {
+			t.Errorf("Expected %q to be %q, got %v", key, value, test[key])
+		}
+	}
+}

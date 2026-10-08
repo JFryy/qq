@@ -2,6 +2,7 @@ package yaml
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"go.yaml.in/yaml/v4"
@@ -95,6 +96,15 @@ func normalizeTypes(val any) any {
 			result[key] = normalizeTypes(value)
 		}
 		return result
+	case map[any]any:
+		// A mapping with a non-string key (e.g. `200: what`) decodes to
+		// map[any]any, which neither JSON nor gojq accept, so stringify the
+		// keys like yq does.
+		result := make(map[string]any, len(v))
+		for key, value := range v {
+			result[mapKey(key)] = normalizeTypes(value)
+		}
+		return result
 	case []any:
 		result := make([]any, len(v))
 		for i, value := range v {
@@ -103,6 +113,18 @@ func normalizeTypes(val any) any {
 		return result
 	default:
 		return v
+	}
+}
+
+// mapKey returns the string form of a YAML mapping key.
+func mapKey(key any) string {
+	switch k := key.(type) {
+	case string:
+		return k
+	case nil:
+		return "null"
+	default:
+		return fmt.Sprint(k)
 	}
 }
 
