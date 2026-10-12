@@ -62,7 +62,7 @@ func (c *Codec) Parse(content string) (map[string]string, error) {
 	// Pattern for parsing variable assignments
 	varPattern := regexp.MustCompile(`^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$`)
 
-	for _, line := range lines {
+	for i, line := range lines {
 		line = strings.TrimSpace(line)
 
 		// Skip empty lines and comments
@@ -78,6 +78,8 @@ func (c *Codec) Parse(content string) (map[string]string, error) {
 			// Extract just the value, ignoring comments
 			value := c.extractValue(valueWithComment)
 			result[key] = value
+		} else {
+			return nil, fmt.Errorf("invalid variable assignment on line %d", i+1)
 		}
 	}
 
