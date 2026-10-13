@@ -15,11 +15,14 @@ Read-only: `.proto`, `.env`
 
 ## Transcoding Between Formats
 
-Any input format can be transcoded to any output format in a single command. Use `-i`/`--input` and `-o`/`--output` to specify formats explicitly, or let `qq` detect them from the file extension.
+Any input format can be transcoded to any output format in a single command. Use `-i`/`--input` and `-o`/`--output` to specify formats explicitly, or let `qq` detect them from the file extension. When reading from stdin and you don't know the format up front, pass `-i auto` to detect it from the content (json, yaml, toml and xml/html).
 
 ```sh
 # YAML → JSON
 qq '.' config.yaml -o json
+
+# Detect the input format from content (handy for stdin)
+kubectl get pod my-pod -o yaml | qq -i auto '.metadata.name'
 
 # TOML → YAML
 qq '.' pyproject.toml -o yaml

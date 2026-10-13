@@ -49,7 +49,7 @@ func CreateRootCmd() *cobra.Command {
 			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus)
 		},
 	}
-	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
+	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin. use \"auto\" to detect the format from the content.")
 	cmd.Flags().StringVarP(&outputType, "output", "o", "json", "specify output file type by extension name. This is inferred from extension if passing file position argument.")
 	cmd.Flags().BoolVarP(&rawOutput, "raw-output", "r", false, "output strings without escapes and quotes.")
 	cmd.Flags().BoolVarP(&help, "help", "h", false, "help for qq")
@@ -161,7 +161,16 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 	// Check if -i flag was explicitly set by user
 	inputFlagSet := cmd.Flags().Changed("input")
 
-	if inputFlagSet {
+	if strings.EqualFold(inputtype, "auto") {
+		// Content based detection, opt-in via -i auto so it never changes the
+		// default behaviour. Detection needs the whole input buffered, which is
+		// at odds with streaming, so ask the user to be explicit there.
+		if stream {
+			fmt.Println("Error: input type \"auto\" cannot be used with --stream; specify the input type explicitly")
+			os.Exit(1)
+		}
+		inputCodec, err = codec.Detect(input)
+	} else if inputFlagSet {
 		// -i flag takes precedence over file extension
 		inputCodec, err = codec.GetEncodingType(inputtype)
 	} else if filename != "" {
