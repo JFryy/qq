@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"time"
 
 	"go.yaml.in/yaml/v4"
 )
@@ -56,7 +57,10 @@ func (c Codec) Unmarshal(data []byte, v any) error {
 // setInterface sets the value of v to val
 func setInterface(v any, val any) error {
 	// Normalize types to be compatible with gojq/JSON
-	normalized := normalizeTypes(val)
+	normalized, err := normalizeTypes(val)
+	if err != nil {
+		return err
+	}
 
 	// v is a pointer to any, so we need to set it properly
 	switch ptr := v.(type) {
@@ -75,44 +79,61 @@ func setInterface(v any, val any) error {
 
 // normalizeTypes converts YAML-specific types (uint, uint64, etc.) to types
 // compatible with JSON and gojq (int, float64, etc.)
-func normalizeTypes(val any) any {
+func normalizeTypes(val any) (any, error) {
 	switch v := val.(type) {
 	case uint:
-		return int(v)
+		return int(v), nil
 	case uint8:
-		return int(v)
+		return int(v), nil
 	case uint16:
-		return int(v)
+		return int(v), nil
 	case uint32:
-		return int(v)
+		return int(v), nil
 	case uint64:
 		if v <= 9007199254740992 { // Max safe integer in JSON (2^53)
-			return int(v)
+			return int(v), nil
 		}
-		return float64(v)
+		return float64(v), nil
 	case map[string]any:
 		result := make(map[string]any, len(v))
 		for key, value := range v {
-			result[key] = normalizeTypes(value)
+			normalized, err := normalizeTypes(value)
+			if err != nil {
+				return nil, err
+			}
+			result[key] = normalized
 		}
-		return result
+		return result, nil
 	case map[any]any:
 		// A mapping with a non-string key (e.g. `200: what`) decodes to
 		// map[any]any, which neither JSON nor gojq accept, so stringify the
-		// keys like yq does.
+		// keys. Two keys can stringify to the same value (`1` and `1.0`,
+		// `true` and "true"); report that instead of keeping one at random.
 		result := make(map[string]any, len(v))
 		for key, value := range v {
-			result[mapKey(key)] = normalizeTypes(value)
+			name := mapKey(key)
+			if _, exists := result[name]; exists {
+				return nil, fmt.Errorf("yaml: mapping has more than one key that converts to %q", name)
+			}
+			normalized, err := normalizeTypes(value)
+			if err != nil {
+				return nil, err
+			}
+			result[name] = normalized
 		}
-		return result
+		return result, nil
 	case []any:
 		result := make([]any, len(v))
 		for i, value := range v {
-			result[i] = normalizeTypes(value)
+			normalized, err := normalizeTypes(value)
+			if err != nil {
+				return nil, err
+			}
+			result[i] = normalized
 		}
-		return result
+		return result, nil
 	default:
-		return v
+		return v, nil
 	}
 }
 
@@ -123,9 +144,20 @@ func mapKey(key any) string {
 		return k
 	case nil:
 		return "null"
+	case time.Time:
+		return timestampString(k)
 	default:
 		return fmt.Sprint(k)
 	}
+}
+
+// timestampString formats a YAML timestamp: a date alone (decoded as midnight
+// UTC) as 2006-01-02, like yq, and anything else as RFC 3339.
+func timestampString(t time.Time) string {
+	if t.Location() == time.UTC && t.Equal(t.Truncate(24*time.Hour)) {
+		return t.Format(time.DateOnly)
+	}
+	return t.Format(time.RFC3339Nano)
 }
 
 // Marshal handles both single values and arrays.
