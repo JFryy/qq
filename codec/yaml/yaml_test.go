@@ -1,6 +1,7 @@
 package yaml
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -545,5 +546,93 @@ name: doc2`
 		if _, ok := result.(map[string]any); !ok {
 			t.Errorf("Expected array or map, got %T", result)
 		}
+	}
+}
+
+// unmarshalTestMap decodes yamlData and returns the mapping under its "test" key.
+func unmarshalTestMap(t *testing.T, yamlData string) map[string]any {
+	t.Helper()
+	codec := &Codec{}
+	var result any
+	if err := codec.Unmarshal([]byte(yamlData), &result); err != nil {
+		t.Fatalf("Unmarshal failed: %v", err)
+	}
+	root, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("Expected result to be map[string]any, got %T", result)
+	}
+	test, ok := root["test"].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected test to be map[string]any, got %T", root["test"])
+	}
+	return test
+}
+
+func TestYAMLNonStringKeys(t *testing.T) {
+	test := unmarshalTestMap(t, `test:
+  200: what
+  1.5: float
+  true: bool
+  null: none
+`)
+
+	expected := map[string]string{"200": "what", "1.5": "float", "true": "bool", "null": "none"}
+	for key, value := range expected {
+		if test[key] != value {
+			t.Errorf("Expected %q to be %q, got %v", key, value, test[key])
+		}
+	}
+	if len(test) != len(expected) {
+		t.Errorf("Expected %d keys, got %d: %v", len(expected), len(test), test)
+	}
+}
+
+func TestYAMLTimestampKeys(t *testing.T) {
+	test := unmarshalTestMap(t, `test:
+  2024-01-01: date
+  2024-01-01T10:20:30Z: utc
+  2024-01-01T10:20:30.5+02:00: offset
+`)
+
+	expected := map[string]string{
+		"2024-01-01":                  "date",
+		"2024-01-01T10:20:30Z":        "utc",
+		"2024-01-01T10:20:30.5+02:00": "offset",
+	}
+	for key, value := range expected {
+		if test[key] != value {
+			t.Errorf("Expected %q to be %q, got %v", key, value, test[key])
+		}
+	}
+	if len(test) != len(expected) {
+		t.Errorf("Expected %d keys, got %d: %v", len(expected), len(test), test)
+	}
+}
+
+func TestYAMLNonStringKeyCollision(t *testing.T) {
+	tests := []struct {
+		name     string
+		yamlData string
+		errText  string
+	}{
+		// Different key text, same string form: caught by normalizeTypes.
+		{"int and float", "test:\n  1: x\n  1.0: y\n", `more than one key that converts to "1"`},
+		{"int and exponent", "test:\n  1000: x\n  1e3: y\n", `more than one key that converts to "1000"`},
+		// Same key text: the YAML decoder already rejects these.
+		{"bool and string", "test:\n  true: x\n  \"true\": y\n", "already defined"},
+		{"null and string", "test:\n  null: x\n  \"null\": y\n", "already defined"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			codec := &Codec{}
+			var result any
+			err := codec.Unmarshal([]byte(tt.yamlData), &result)
+			if err == nil {
+				t.Fatalf("Expected an error for colliding keys, got %v", result)
+			}
+			if !strings.Contains(err.Error(), tt.errText) {
+				t.Errorf("Expected error containing %q, got: %v", tt.errText, err)
+			}
+		})
 	}
 }
