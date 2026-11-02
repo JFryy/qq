@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  namespace: shop
+  labels:
+    app: checkout
+    team: payments
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/acme/checkout:1.14.2
+          ports:
+            - containerPort: 8080
+          env:
+            - name: LOG_LEVEL
+              value: info
+            - name: DB_HOST
+              value: postgres.shop.svc
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+        - name: envoy
+          image: envoyproxy/envoy:v1.31.0
+          ports:
+            - containerPort: 9901
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi

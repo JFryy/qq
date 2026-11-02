@@ -9,6 +9,8 @@
 
 `qq` is a multi-format transcoder and query tool powered by `jq` syntax. It lets you query and convert between configuration and data formats without needing separate tools for each one.
 
+![Demo GIF](docs/demo.gif)
+
 Supported formats (read/write): `.json`, `.yaml`/`.yml`, `.toml`, `.xml`, `.hcl`/`.tf`, `.csv`, `.tsv`, `.ini`, `.properties`, `.gron`, `.html`, `.jsonl`/`.ndjson`/`.jsonlines`, `.jsonc`, `.parquet`, `.msgpack`/`.mpk`, `.cbor`, `.avro`, `.base64`/`.b64`, `.txt`/`.text`,
 
 Read-only: `.proto`, `.env`
@@ -45,8 +47,7 @@ cat file.msgpack | qq -i msgpack -o yaml
 
 ## Usage
 
-Here's some example usage, this emphasises the interactive mode for demonstration, but `qq` is designed for usage in shell scripts.
-![Demo GIF](docs/demo.gif)
+Here's some example usage. `qq` is designed for usage in shell scripts.
 
 ```sh
 # JSON is default in and output.

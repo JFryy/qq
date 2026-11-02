@@ -21,7 +21,10 @@ install: build test
 	mkdir -p $(DESTDIR)
 	cp bin/$(BINARY) $(DESTDIR)
 
+demo: build
+	vhs docs/qq.tape
+
 docker-push:
 	docker buildx build --platform linux/amd64,linux/arm64 . -t jfryy/qq:latest --push
 
-.PHONY: all build test clean install docker-push
+.PHONY: all build test clean install demo docker-push
