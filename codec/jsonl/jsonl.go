@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	qqjson "github.com/JFryy/qq/codec/json"
+	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/goccy/go-json"
 )
 
@@ -65,6 +66,38 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 
 // Marshal converts data to JSONL format (one JSON object per line)
 func (c *Codec) Marshal(v any) ([]byte, error) {
+	items, err := lineItems(v)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	for i, item := range items {
+		lineData, err := qqjson.MarshalCompact(item)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling item %d: %v", i, err)
+		}
+		buf.Write(lineData)
+		buf.WriteByte('\n')
+	}
+
+	return buf.Bytes(), nil
+}
+
+// lineItems returns the values to write one per line: the elements of an
+// array, or v itself.
+func lineItems(v any) ([]any, error) {
+	// A JSON round trip would lose recorded key order, and query results are
+	// already plain JSON values.
+	if keyorder.Enabled() {
+		switch val := v.(type) {
+		case []any:
+			return val, nil
+		case map[string]any:
+			return []any{val}, nil
+		}
+	}
+
 	// Convert to JSON first to normalize the data
 	data, err := json.Marshal(v)
 	if err != nil {
@@ -79,16 +112,5 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 	if !ok && decoded != nil {
 		items = []any{decoded}
 	}
-
-	var buf bytes.Buffer
-	for i, item := range items {
-		lineData, err := json.Marshal(item)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling item %d: %v", i, err)
-		}
-		buf.Write(lineData)
-		buf.WriteByte('\n')
-	}
-
-	return buf.Bytes(), nil
+	return items, nil
 }

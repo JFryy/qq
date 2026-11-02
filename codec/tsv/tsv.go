@@ -5,11 +5,11 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/JFryy/qq/codec/util"
 	"github.com/goccy/go-json"
 	"io"
 	"reflect"
-	"slices"
 	"strings"
 )
 
@@ -35,11 +35,7 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 		return nil, errors.New("slice elements must be of type map[string]any")
 	}
 
-	var headers []string
-	for key := range firstElemValue {
-		headers = append(headers, key)
-	}
-	slices.Sort(headers)
+	headers := keyorder.Keys(firstElemValue)
 
 	if err := w.Write(headers); err != nil {
 		return nil, fmt.Errorf("error writing TSV headers: %v", err)
@@ -80,7 +76,8 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 		return fmt.Errorf("error reading TSV headers: %v", err)
 	}
 
-	var records []map[string]any
+	// A header without rows decodes to an empty array rather than null.
+	records := make([]map[string]any, 0)
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -110,5 +107,8 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 		return fmt.Errorf("error unmarshaling JSON: %v", err)
 	}
 
+	if ptr, ok := v.(*any); ok {
+		keyorder.RecordRows(*ptr, headers)
+	}
 	return nil
 }

@@ -70,6 +70,9 @@ qq --stream 'select(length == 2)' large.json
 # slurp mode - read multiple inputs into an array
 echo -e '{"id":1}\n{"id":2}' | qq -s 'map(.id)'
 
+# preserve input key order (objects the query creates or modifies have sorted keys)
+qq -k '.spec' deployment.yaml -o json
+
 # exit-status - use in conditionals
 echo '{"active":true}' | qq -e '.active' && echo "is active"
 ```
