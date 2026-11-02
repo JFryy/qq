@@ -316,12 +316,14 @@ func (m model) View() string {
 	return b.String()
 }
 
-func Interact(s string) (string, bool) {
+// Interact runs the interactive query builder on the JSON document s. It
+// returns the final query and whether the user exited with a valid query to
+// run, or an error if the interface could not run.
+func Interact(s string) (string, bool, error) {
 	m, err := tea.NewProgram(newModel(s), tea.WithAltScreen()).Run()
 	if err != nil {
-		fmt.Println("Error running program:", err)
-		return "", false
+		return "", false, fmt.Errorf("error running interactive mode: %w", err)
 	}
 	modelState := m.(model)
-	return modelState.textArea.Value(), modelState.gracefulExit
+	return modelState.textArea.Value(), modelState.gracefulExit, nil
 }
