@@ -81,6 +81,8 @@ func setInterface(v any, val any) error {
 // compatible with JSON and gojq (int, float64, etc.)
 func normalizeTypes(val any) (any, error) {
 	switch v := val.(type) {
+	case time.Time:
+		return timestampString(v), nil
 	case uint:
 		return int(v), nil
 	case uint8:
