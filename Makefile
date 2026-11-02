@@ -1,11 +1,13 @@
 SRC = ./
 BINARY = qq
 DESTDIR = ~/.local/bin
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS = -X github.com/JFryy/qq/cli.Version=$(VERSION)
 
 all: build
 
 build:
-	go build -o bin/$(BINARY) $(SRC)
+	go build -ldflags "$(LDFLAGS)" -o bin/$(BINARY) $(SRC)
 
 test: build
 	./tests/test.sh

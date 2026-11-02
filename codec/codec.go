@@ -5,8 +5,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/JFryy/qq/codec/util"
-
 	// dedicated codec packages and wrappers where appropriate
 	"github.com/JFryy/qq/codec/avro"
 	"github.com/JFryy/qq/codec/base64"
@@ -200,9 +198,4 @@ func Marshal(v any, outputFileType EncodingType) ([]byte, error) {
 
 func IsBinaryFormat(fileType EncodingType) bool {
 	return fileType == PARQUET || fileType == MSGPACK || fileType == CBOR || fileType == AVRO
-}
-
-func SetPreserveKeyOrder(preserve bool) {
-	util.PreserveKeyOrder = preserve
-	util.ClearKeyOrder()
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/goccy/go-json"
 )
 
@@ -20,7 +21,7 @@ func (c *Codec) Unmarshal(data []byte, v interface{}) error {
 	cleaned := c.stripComments(string(data))
 
 	// Parse as regular JSON
-	return json.Unmarshal([]byte(cleaned), v)
+	return qqjson.Unmarshal([]byte(cleaned), v)
 }
 
 // Marshal converts data to JSON format (comments are not preserved in output)

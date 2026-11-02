@@ -1,10 +1,63 @@
 package env
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/goccy/go-json"
 )
+
+func TestInvalidAssignments(t *testing.T) {
+	for _, line := range []string{
+		"%bad",
+		"missing assignment",
+		"=missing name",
+		"9INVALID=value",
+		"INVALID-NAME=value",
+		"export NAME",
+		"NAME value",
+		"NAME =value",
+	} {
+		t.Run(line, func(t *testing.T) {
+			content := "\n# comment\nGOOD=value\n" + line + "\n"
+			codec := Codec{}
+			result, err := codec.Parse(content)
+			wantErr := "invalid variable assignment on line 4"
+			if err == nil || err.Error() != wantErr {
+				t.Fatalf("Parse error = %v, want %q", err, wantErr)
+			}
+			if result != nil {
+				t.Fatalf("Parse returned partial data: %v", result)
+			}
+
+			original := map[string]string{"KEEP": "old value"}
+			var decoded = map[string]string{"KEEP": "old value"}
+			if err := codec.Unmarshal([]byte(content), &decoded); err == nil || err.Error() != wantErr {
+				t.Fatalf("Unmarshal error = %v, want %q", err, wantErr)
+			}
+			if !reflect.DeepEqual(decoded, original) {
+				t.Fatalf("Unmarshal changed destination: %v", decoded)
+			}
+		})
+	}
+}
+
+func TestAssignmentWhitespace(t *testing.T) {
+	content := " \r\n\t# comment\r\n \texport \t_9=value with spaces\r\nEMPTY=\r\nVALUE=\"%bad # preserved\"\r\n"
+	codec := Codec{}
+	got, err := codec.Parse(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{
+		"_9":    "value with spaces",
+		"EMPTY": "",
+		"VALUE": "%bad # preserved",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Parse = %v, want %v", got, want)
+	}
+}
 
 func TestBasicEnvParsing(t *testing.T) {
 	envContent := `# Database configuration

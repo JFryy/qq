@@ -3,7 +3,9 @@ package env
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/goccy/go-json"
@@ -45,8 +47,8 @@ func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	}
 
 	var lines []string
-	for key, value := range envVars {
-		lines = append(lines, fmt.Sprintf("%s=%s", key, c.formatValue(value)))
+	for _, key := range slices.Sorted(maps.Keys(envVars)) {
+		lines = append(lines, fmt.Sprintf("%s=%s", key, c.formatValue(envVars[key])))
 	}
 
 	return []byte(strings.Join(lines, "\n")), nil
@@ -60,7 +62,7 @@ func (c *Codec) Parse(content string) (map[string]string, error) {
 	// Pattern for parsing variable assignments
 	varPattern := regexp.MustCompile(`^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$`)
 
-	for _, line := range lines {
+	for i, line := range lines {
 		line = strings.TrimSpace(line)
 
 		// Skip empty lines and comments
@@ -76,6 +78,8 @@ func (c *Codec) Parse(content string) (map[string]string, error) {
 			// Extract just the value, ignoring comments
 			value := c.extractValue(valueWithComment)
 			result[key] = value
+		} else {
+			return nil, fmt.Errorf("invalid variable assignment on line %d", i+1)
 		}
 	}
 

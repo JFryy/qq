@@ -5,11 +5,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 
 	qqjson "github.com/JFryy/qq/codec/json"
-	"github.com/JFryy/qq/codec/util"
+	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/goccy/go-json"
 )
 
@@ -25,8 +24,6 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 	var result []any
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 
-	jsonCodec := &qqjson.Codec{}
-
 	lineNum := 0
 	for scanner.Scan() {
 		lineNum++
@@ -38,13 +35,7 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 		}
 
 		var obj any
-		var err error
-		if util.PreserveKeyOrder {
-			err = jsonCodec.Unmarshal([]byte(line), &obj)
-		} else {
-			err = json.Unmarshal([]byte(line), &obj)
-		}
-		if err != nil {
+		if err := qqjson.Unmarshal([]byte(line), &obj); err != nil {
 			return fmt.Errorf("error parsing JSON on line %d: %v", lineNum, err)
 		}
 		result = append(result, obj)
@@ -54,41 +45,35 @@ func (c *Codec) Unmarshal(data []byte, v any) error {
 		return fmt.Errorf("error reading JSONL: %v", err)
 	}
 
-	jsonData, err := jsonCodec.MarshalCompact(result)
+	// A JSON round trip would turn integers back into float64.
+	if ptr, ok := v.(*any); ok {
+		if result == nil {
+			*ptr = nil
+		} else {
+			*ptr = result
+		}
+		return nil
+	}
+
+	// Marshal and unmarshal through JSON to convert to target type
+	jsonData, err := json.Marshal(result)
 	if err != nil {
 		return err
 	}
 
-	if util.PreserveKeyOrder {
-		return jsonCodec.Unmarshal(jsonData, v)
-	}
 	return json.Unmarshal(jsonData, v)
 }
 
 // Marshal converts data to JSONL format (one JSON object per line)
 func (c *Codec) Marshal(v any) ([]byte, error) {
-	var items []any
-	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Slice {
-		items = make([]any, rv.Len())
-		for i := 0; i < rv.Len(); i++ {
-			items[i] = rv.Index(i).Interface()
-		}
-	} else {
-		items = []any{v}
+	items, err := lineItems(v)
+	if err != nil {
+		return nil, err
 	}
-
-	jsonCodec := &qqjson.Codec{}
 
 	var buf bytes.Buffer
 	for i, item := range items {
-		var lineData []byte
-		var err error
-		if util.PreserveKeyOrder {
-			lineData, err = jsonCodec.MarshalCompact(item)
-		} else {
-			lineData, err = json.Marshal(item)
-		}
+		lineData, err := qqjson.MarshalCompact(item)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling item %d: %v", i, err)
 		}
@@ -97,4 +82,35 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// lineItems returns the values to write one per line: the elements of an
+// array, or v itself.
+func lineItems(v any) ([]any, error) {
+	// A JSON round trip would lose recorded key order, and query results are
+	// already plain JSON values.
+	if keyorder.Enabled() {
+		switch val := v.(type) {
+		case []any:
+			return val, nil
+		case map[string]any:
+			return []any{val}, nil
+		}
+	}
+
+	// Convert to JSON first to normalize the data
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	var decoded any
+	if err := qqjson.Unmarshal(data, &decoded); err != nil {
+		return nil, err
+	}
+	items, ok := decoded.([]any)
+	if !ok && decoded != nil {
+		items = []any{decoded}
+	}
+	return items, nil
 }

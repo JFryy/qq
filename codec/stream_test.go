@@ -59,7 +59,7 @@ func TestStreamParser_Array(t *testing.T) {
 	if len(path) != 1 || path[0] != 0 {
 		t.Errorf("Expected path [0], got %v", path)
 	}
-	if first[1] != float64(1) {
+	if first[1] != 1 {
 		t.Errorf("Expected value 1, got %v", first[1])
 	}
 }
@@ -107,7 +107,7 @@ func TestStreamParser_ArrayOfObjects(t *testing.T) {
 	if len(path) != 2 || path[0] != 0 || path[1] != "id" {
 		t.Errorf("Expected path [0, \"id\"], got %v", path)
 	}
-	if first[1] != float64(1) {
+	if first[1] != 1 {
 		t.Errorf("Expected value 1, got %v", first[1])
 	}
 }
@@ -161,7 +161,7 @@ func TestStreamParser_PrimitiveValue(t *testing.T) {
 	if len(path) != 0 {
 		t.Errorf("Expected empty path [], got %v", path)
 	}
-	if first[1] != float64(42) {
+	if first[1] != 42 {
 		t.Errorf("Expected value 42, got %v", first[1])
 	}
 }

@@ -2,50 +2,42 @@ package xml
 
 import (
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"reflect"
-	"sort"
+	"strings"
 
+	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/JFryy/qq/codec/util"
 	"github.com/clbanning/mxj/v2"
 )
 
 type Codec struct{}
 
-type xmlNode struct {
-	name     string
-	children []string
-	nested   map[string]*xmlNode
-}
+const (
+	indent = "  "
+	// attrPrefix and textKey are mxj's default names for attributes and for
+	// the character data of an element that also has attributes or children.
+	attrPrefix = "-"
+	textKey    = "#text"
+)
 
 func (c *Codec) Marshal(v any) ([]byte, error) {
-	if !util.PreserveKeyOrder {
-		switch v := v.(type) {
-		case map[string]any:
-			mv := mxj.Map(v)
-			return mv.XmlIndent("", "  ")
-		case []any:
-			mv := mxj.Map(map[string]any{"root": v})
-			return mv.XmlIndent("", "  ")
-		default:
-			mv := mxj.Map(map[string]any{"value": v})
-			return mv.XmlIndent("", "  ")
-		}
-	}
-
-	switch val := v.(type) {
+	var m map[string]any
+	switch v := v.(type) {
 	case map[string]any:
-		if len(val) == 1 {
-			for k, innerVal := range val {
-				return marshalXMLOrdered(innerVal, k, "  ", "")
-			}
-		}
-		return marshalXMLOrdered(val, "root", "  ", "")
+		m = v
+	case []any:
+		m = map[string]any{"root": v}
 	default:
-		return marshalXMLOrdered(val, "root", "  ", "")
+		m = map[string]any{"value": v}
 	}
+	if keyorder.Enabled() {
+		return marshalOrdered(m)
+	}
+	return mxj.Map(m).XmlIndent("", indent)
 }
 
 func (c *Codec) Unmarshal(input []byte, v any) error {
@@ -55,15 +47,9 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 	}
 
 	parsedData := c.parseXMLValues(mv.Old())
-
-	if util.PreserveKeyOrder {
-		structNode, err := parseXMLStructure(input)
-		if err == nil {
-			keys := make(map[uintptr][]string)
-			matchAndRegister(parsedData, structNode, keys)
-			for ptr, list := range keys {
-				util.SetKeyOrder(ptr, list)
-			}
+	if keyorder.Recording() {
+		if err := recordKeyOrder(input, parsedData); err != nil {
+			return fmt.Errorf("error recording XML key order: %v", err)
 		}
 	}
 
@@ -97,153 +83,233 @@ func (c *Codec) parseXMLValues(v any) any {
 	}
 }
 
-func parseXMLStructure(data []byte) (*xmlNode, error) {
-	dec := xml.NewDecoder(bytes.NewReader(data))
-	root := &xmlNode{name: "root", nested: make(map[string]*xmlNode)}
-	stack := []*xmlNode{root}
-
+// recordKeyOrder scans the XML document that was decoded into value and
+// records, for each element map, its attributes in document order followed by
+// its text and child elements in order of first appearance. Element and
+// attribute names follow mxj: the local name, with attrPrefix for attributes.
+func recordKeyOrder(input []byte, value any) error {
+	decoder := xml.NewDecoder(bytes.NewReader(input))
+	decoder.CharsetReader = mxj.XmlCharsetReader
+	root, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
 	for {
-		tok, err := dec.Token()
+		token, err := decoder.Token()
 		if err == io.EOF {
-			break
+			return nil
 		}
 		if err != nil {
-			return nil, err
+			return err
 		}
+		if start, ok := token.(xml.StartElement); ok {
+			return scanElement(decoder, start, root[start.Name.Local])
+		}
+	}
+}
 
-		switch t := tok.(type) {
+// scanElement reads the content of the element opened by start and records
+// its key order on value, the element's decoded map.
+func scanElement(decoder *xml.Decoder, start xml.StartElement, value any) error {
+	m, _ := value.(map[string]any)
+	var keys []string
+	for _, attr := range start.Attr {
+		keys = append(keys, attrPrefix+attr.Name.Local)
+	}
+	seen := make(map[string]int)
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		switch t := token.(type) {
 		case xml.StartElement:
-			parent := stack[len(stack)-1]
-			tagName := t.Name.Local
-
-			has := false
-			for _, child := range parent.children {
-				if child == tagName {
-					has = true
-					break
-				}
+			name := t.Name.Local
+			keys = append(keys, name)
+			if err := scanElement(decoder, t, occurrence(m[name], seen[name])); err != nil {
+				return err
 			}
-			if !has {
-				parent.children = append(parent.children, tagName)
+			seen[name]++
+		case xml.CharData:
+			if strings.TrimSpace(string(t)) != "" {
+				keys = append(keys, textKey)
 			}
-
-			childNode := parent.nested[tagName]
-			if childNode == nil {
-				childNode = &xmlNode{name: tagName, nested: make(map[string]*xmlNode)}
-				parent.nested[tagName] = childNode
-			}
-			stack = append(stack, childNode)
-
 		case xml.EndElement:
-			if len(stack) > 1 {
-				stack = stack[:len(stack)-1]
-			}
-		}
-	}
-
-	return root, nil
-}
-
-func matchAndRegister(val any, node *xmlNode, keys map[uintptr][]string) {
-	switch v := val.(type) {
-	case map[string]any:
-		if len(node.children) > 0 {
-			var orderedKeys []string
-			for _, child := range node.children {
-				if _, has := v[child]; has {
-					orderedKeys = append(orderedKeys, child)
-				}
-			}
-			ptr := uintptr(reflect.ValueOf(v).UnsafePointer())
-			keys[ptr] = orderedKeys
-		}
-
-		for key, childVal := range v {
-			if childNode, ok := node.nested[key]; ok {
-				matchAndRegister(childVal, childNode, keys)
-			}
-		}
-
-	default:
-		rv := reflect.ValueOf(val)
-		if rv.Kind() == reflect.Slice {
-			for i := 0; i < rv.Len(); i++ {
-				matchAndRegister(rv.Index(i).Interface(), node, keys)
-			}
+			keyorder.Record(m, keys)
+			return nil
 		}
 	}
 }
 
-func marshalXMLOrdered(v any, tagName string, indent string, currentIndent string) ([]byte, error) {
-	if v == nil {
-		return []byte(fmt.Sprintf("%s<%s></%s>", currentIndent, tagName, tagName)), nil
-	}
-
-	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Slice {
-		var buf bytes.Buffer
-		for i := 0; i < rv.Len(); i++ {
-			if i > 0 && indent != "" {
-				buf.WriteByte('\n')
-			}
-			elemBytes, err := marshalXMLOrdered(rv.Index(i).Interface(), tagName, indent, currentIndent)
-			if err != nil {
-				return nil, err
-			}
-			buf.Write(elemBytes)
+// occurrence returns the value decoded for the i-th child element with a given
+// name. mxj collects repeated child elements into a list.
+func occurrence(value any, i int) any {
+	if list, ok := value.([]any); ok {
+		if i < len(list) {
+			return list[i]
 		}
-		return buf.Bytes(), nil
+		return nil
 	}
+	if i == 0 {
+		return value
+	}
+	return nil
+}
 
-	switch val := v.(type) {
+// pretty tracks indentation like mxj's encoder: padding is the current line
+// prefix and depth is the number of indents applied.
+type pretty struct {
+	padding string
+	depth   int
+}
+
+func (p pretty) indented() pretty {
+	return pretty{padding: p.padding + indent, depth: p.depth + 1}
+}
+
+// marshalOrdered produces the same output as mxj.Map.XmlIndent("", indent),
+// except that attributes and child elements are written in recorded key
+// order. Values other than maps and arrays are encoded by mxj itself.
+func marshalOrdered(m map[string]any) ([]byte, error) {
+	var b bytes.Buffer
+	var err error
+	if len(m) == 1 {
+		for key, value := range m {
+			if _, ok := value.([]any); ok {
+				err = writeElement(&b, mxj.DefaultRootTag, m, pretty{})
+			} else {
+				err = writeElement(&b, key, value, pretty{})
+			}
+		}
+	} else {
+		err = writeElement(&b, mxj.DefaultRootTag, m, pretty{})
+	}
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+func writeElement(b *bytes.Buffer, key string, value any, p pretty) error {
+	switch v := value.(type) {
 	case map[string]any:
-		ptr := uintptr(reflect.ValueOf(val).UnsafePointer())
-		orderedKeys, ok := util.GetKeyOrder(ptr)
-		if !ok || len(orderedKeys) != len(val) {
-			orderedKeys = make([]string, 0, len(val))
-			for k := range val {
-				orderedKeys = append(orderedKeys, k)
-			}
-			sort.Strings(orderedKeys)
-		} else {
-			for _, k := range orderedKeys {
-				if _, has := val[k]; !has {
-					orderedKeys = make([]string, 0, len(val))
-					for k2 := range val {
-						orderedKeys = append(orderedKeys, k2)
-					}
-					sort.Strings(orderedKeys)
-					break
-				}
-			}
-		}
-
-		var buf bytes.Buffer
-		fmt.Fprintf(&buf, "%s<%s>", currentIndent, tagName)
-		nextIndent := currentIndent + indent
-		for _, k := range orderedKeys {
-			if indent != "" {
-				buf.WriteByte('\n')
-			}
-			elemBytes, err := marshalXMLOrdered(val[k], k, indent, nextIndent)
-			if err != nil {
-				return nil, err
-			}
-			buf.Write(elemBytes)
-		}
-		if indent != "" {
-			buf.WriteByte('\n')
-			buf.WriteString(currentIndent)
-		}
-		fmt.Fprintf(&buf, "</%s>", tagName)
-		return buf.Bytes(), nil
-
-	default:
-		text := fmt.Sprintf("%v", val)
-		var buf bytes.Buffer
-		if err := xml.EscapeText(&buf, []byte(text)); err != nil {
-			return nil, err
-		}
-		return []byte(fmt.Sprintf("%s<%s>%s</%s>", currentIndent, tagName, buf.String(), tagName)), nil
+		return writeMap(b, key, v, p)
+	case []any:
+		return writeList(b, key, v, p)
 	}
+
+	out, err := mxj.Map{key: value}.XmlIndent(p.padding, indent)
+	if err != nil {
+		return err
+	}
+	b.Write(out)
+	// mxj ends every nested element except a non-empty []string list with a
+	// newline; a top-level call has no nesting, so add it here.
+	if list, ok := value.([]string); !ok || len(list) == 0 {
+		endLine(b, p)
+	}
+	return nil
+}
+
+func writeMap(b *bytes.Buffer, key string, m map[string]any, p pretty) error {
+	b.WriteString(p.padding + "<" + key)
+
+	var attrs, children []string
+	for _, k := range keyorder.Keys(m) {
+		switch {
+		case isAttr(k):
+			attrs = append(attrs, k)
+		case k != textKey:
+			children = append(children, k)
+		}
+	}
+	for _, k := range attrs {
+		value, err := attrValue(k, m[k])
+		if err != nil {
+			return err
+		}
+		b.WriteString(" " + k[len(attrPrefix):] + `="` + value + `"`)
+	}
+
+	if len(attrs) == len(m) {
+		b.WriteString("/>")
+		endLine(b, p)
+		return nil
+	}
+
+	text, hasText := m[textKey]
+	if hasText && len(children) == 0 {
+		b.WriteString(">" + textValue(text) + "</" + key + ">")
+		endLine(b, p)
+		return nil
+	}
+
+	b.WriteString(">")
+	if hasText {
+		b.WriteString(textValue(text))
+	}
+	b.WriteString("\n")
+	for _, k := range children {
+		child := m[k]
+		childPretty := p.indented()
+		// Lists indent each of their elements themselves.
+		if _, ok := child.([]any); ok {
+			childPretty = p
+		}
+		if err := writeElement(b, k, child, childPretty); err != nil {
+			return err
+		}
+	}
+	b.WriteString(p.padding + "</" + key + ">")
+	endLine(b, p)
+	return nil
+}
+
+func writeList(b *bytes.Buffer, key string, list []any, p pretty) error {
+	if len(list) == 0 {
+		// Matches mxj's output for an empty list.
+		b.WriteString(p.padding + indent + "<" + key + p.padding + "/>")
+		endLine(b, p)
+		return nil
+	}
+	for _, item := range list {
+		if err := writeElement(b, key, item, p.indented()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func endLine(b *bytes.Buffer, p pretty) {
+	if p.depth > 0 {
+		b.WriteString("\n")
+	}
+}
+
+func isAttr(key string) bool {
+	return len(key) > len(attrPrefix) && strings.HasPrefix(key, attrPrefix)
+}
+
+// attrValue formats an attribute value as mxj does with its default of no
+// character escaping. Only scalar attribute values are accepted.
+func attrValue(key string, value any) (string, error) {
+	switch v := value.(type) {
+	case string:
+		return v, nil
+	case []byte:
+		return string(v), nil
+	case float64, bool, int, int32, int64, float32, json.Number:
+		return fmt.Sprintf("%v", v), nil
+	default:
+		return "", fmt.Errorf("invalid attribute value for: %s:<%T>", key, value)
+	}
+}
+
+// textValue formats element text as mxj does with its default of no character
+// escaping.
+func textValue(value any) string {
+	if v, ok := value.([]byte); ok {
+		return string(v)
+	}
+	return fmt.Sprintf("%v", value)
 }

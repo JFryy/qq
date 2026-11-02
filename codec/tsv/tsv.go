@@ -5,14 +5,12 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"io"
-	"reflect"
-	"slices"
-	"strings"
-
-	qqjson "github.com/JFryy/qq/codec/json"
+	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/JFryy/qq/codec/util"
 	"github.com/goccy/go-json"
+	"io"
+	"reflect"
+	"strings"
 )
 
 type Codec struct{}
@@ -37,20 +35,7 @@ func (c *Codec) Marshal(v any) ([]byte, error) {
 		return nil, errors.New("slice elements must be of type map[string]any")
 	}
 
-	var headers []string
-	ptr := uintptr(reflect.ValueOf(firstElemValue).UnsafePointer())
-	if util.PreserveKeyOrder {
-		if list, ok := util.GetKeyOrder(ptr); ok && len(list) == len(firstElemValue) {
-			headers = list
-		}
-	}
-
-	if len(headers) == 0 {
-		for key := range firstElemValue {
-			headers = append(headers, key)
-		}
-		slices.Sort(headers)
-	}
+	headers := keyorder.Keys(firstElemValue)
 
 	if err := w.Write(headers); err != nil {
 		return nil, fmt.Errorf("error writing TSV headers: %v", err)
@@ -91,7 +76,8 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 		return fmt.Errorf("error reading TSV headers: %v", err)
 	}
 
-	records := make([]any, 0)
+	// A header without rows decodes to an empty array rather than null.
+	records := make([]map[string]any, 0)
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -109,21 +95,20 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 				rowMap[header] = ""
 			}
 		}
-		if util.PreserveKeyOrder {
-			ptr := uintptr(reflect.ValueOf(rowMap).UnsafePointer())
-			util.SetKeyOrder(ptr, headers)
-		}
 		records = append(records, rowMap)
 	}
 
-	jsonCodec := &qqjson.Codec{}
-	jsonData, err := jsonCodec.MarshalCompact(records)
+	jsonData, err := json.Marshal(records)
 	if err != nil {
 		return fmt.Errorf("error marshaling to JSON: %v", err)
 	}
 
-	if util.PreserveKeyOrder {
-		return jsonCodec.Unmarshal(jsonData, v)
+	if err := json.Unmarshal(jsonData, v); err != nil {
+		return fmt.Errorf("error unmarshaling JSON: %v", err)
 	}
-	return json.Unmarshal(jsonData, v)
+
+	if ptr, ok := v.(*any); ok {
+		keyorder.RecordRows(*ptr, headers)
+	}
+	return nil
 }

@@ -2,13 +2,11 @@ package yaml
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
-	"reflect"
-	"sort"
+	"time"
 
-	"github.com/JFryy/qq/codec/util"
+	"github.com/JFryy/qq/codec/keyorder"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -18,70 +16,25 @@ type Codec struct{}
 // For multi-document YAML (separated by ---), it returns an array of documents.
 // For single-document YAML, it returns the document as-is.
 func (c Codec) Unmarshal(data []byte, v any) error {
-	if !util.PreserveKeyOrder {
-		decoder := yaml.NewDecoder(bytes.NewReader(data))
-
-		// Try to decode the first document
-		var firstDoc any
-		err := decoder.Decode(&firstDoc)
-		if err != nil {
-			return err
-		}
-
-		// Try to decode a second document to check if this is multi-document YAML
-		var secondDoc any
-		err = decoder.Decode(&secondDoc)
-		if err == io.EOF {
-			// Only one document, return it directly
-			return setInterface(v, firstDoc)
-		}
-		if err != nil {
-			return err
-		}
-
-		// Multiple documents exist, collect them all into an array
-		docs := []any{firstDoc, secondDoc}
-
-		// Continue reading remaining documents
-		for {
-			var doc any
-			err := decoder.Decode(&doc)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
-			docs = append(docs, doc)
-		}
-
-		return setInterface(v, docs)
+	if keyorder.Recording() {
+		return unmarshalRecordingOrder(data, v)
 	}
-
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 
-	// Try to decode the first document as a node
-	var firstNode yaml.Node
-	err := decoder.Decode(&firstNode)
-	if err != nil {
-		return err
-	}
-	firstDoc, err := parseYAMLNode(&firstNode)
+	// Try to decode the first document
+	var firstDoc any
+	err := decoder.Decode(&firstDoc)
 	if err != nil {
 		return err
 	}
 
 	// Try to decode a second document to check if this is multi-document YAML
-	var secondNode yaml.Node
-	err = decoder.Decode(&secondNode)
+	var secondDoc any
+	err = decoder.Decode(&secondDoc)
 	if err == io.EOF {
 		// Only one document, return it directly
 		return setInterface(v, firstDoc)
 	}
-	if err != nil {
-		return err
-	}
-	secondDoc, err := parseYAMLNode(&secondNode)
 	if err != nil {
 		return err
 	}
@@ -91,15 +44,11 @@ func (c Codec) Unmarshal(data []byte, v any) error {
 
 	// Continue reading remaining documents
 	for {
-		var node yaml.Node
-		err := decoder.Decode(&node)
+		var doc any
+		err := decoder.Decode(&doc)
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			return err
-		}
-		doc, err := parseYAMLNode(&node)
 		if err != nil {
 			return err
 		}
@@ -109,56 +58,180 @@ func (c Codec) Unmarshal(data []byte, v any) error {
 	return setInterface(v, docs)
 }
 
-func parseYAMLNode(n *yaml.Node) (any, error) {
-	switch n.Kind {
-	case yaml.DocumentNode:
-		if len(n.Content) == 0 {
-			return nil, nil
+// unmarshalRecordingOrder decodes like Unmarshal, through yaml.Node so that
+// the key order of each mapping can be recorded on the decoded maps.
+func unmarshalRecordingOrder(data []byte, v any) error {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	var docs []any
+	var nodes []*yaml.Node
+	for {
+		var node yaml.Node
+		err := decoder.Decode(&node)
+		if err == io.EOF && len(docs) > 0 {
+			break
 		}
-		return parseYAMLNode(n.Content[0])
-	case yaml.MappingNode:
-		m := make(map[string]any)
-		var keyList []string
-		for i := 0; i < len(n.Content); i += 2 {
-			kNode := n.Content[i]
-			vNode := n.Content[i+1]
-			key := kNode.Value
-			val, err := parseYAMLNode(vNode)
-			if err != nil {
-				return nil, err
-			}
-			m[key] = val
-			keyList = append(keyList, key)
+		if err != nil {
+			return err
 		}
-		ptr := uintptr(reflect.ValueOf(m).UnsafePointer())
-		util.SetKeyOrder(ptr, keyList)
-		return m, nil
-	case yaml.SequenceNode:
-		arr := make([]any, len(n.Content))
-		for i, item := range n.Content {
-			val, err := parseYAMLNode(item)
-			if err != nil {
-				return nil, err
-			}
-			arr[i] = val
+		var doc any
+		if err := node.Decode(&doc); err != nil {
+			return err
 		}
-		return arr, nil
-	case yaml.ScalarNode:
-		var val any
-		if err := n.Decode(&val); err != nil {
-			return nil, err
-		}
-		return val, nil
-	default:
-		return nil, fmt.Errorf("unknown node kind %d", n.Kind)
+		docs = append(docs, doc)
+		nodes = append(nodes, &node)
 	}
+
+	var value any = docs
+	if len(docs) == 1 {
+		value = docs[0]
+	}
+	normalized, err := normalizeTypes(value)
+	if err != nil {
+		return err
+	}
+
+	if len(nodes) == 1 {
+		err = recordKeyOrder(nodes[0], normalized)
+	} else {
+		for i, doc := range normalized.([]any) {
+			if err = recordKeyOrder(nodes[i], doc); err != nil {
+				break
+			}
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("yaml: recording key order: %w", err)
+	}
+	return assign(v, normalized)
+}
+
+// recordKeyOrder records the key order of each mapping in node on the matching
+// map in value, the normalized result of decoding node.
+func recordKeyOrder(node *yaml.Node, value any) error {
+	node = resolveNode(node)
+	switch node.Kind {
+	case yaml.MappingNode:
+		m, ok := value.(map[string]any)
+		if !ok {
+			return nil
+		}
+		keys, values, err := mappingEntries(node)
+		if err != nil {
+			return err
+		}
+		keyorder.Record(m, keys)
+		for i, key := range keys {
+			if err := recordKeyOrder(values[i], m[key]); err != nil {
+				return err
+			}
+		}
+	case yaml.SequenceNode:
+		items, ok := value.([]any)
+		if !ok || len(items) != len(node.Content) {
+			return nil
+		}
+		for i, item := range items {
+			if err := recordKeyOrder(node.Content[i], item); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// resolveNode follows document and alias nodes to the node holding the value.
+func resolveNode(node *yaml.Node) *yaml.Node {
+	for {
+		switch {
+		case node.Kind == yaml.DocumentNode && len(node.Content) == 1:
+			node = node.Content[0]
+		case node.Kind == yaml.AliasNode && node.Alias != nil:
+			node = node.Alias
+		default:
+			return node
+		}
+	}
+}
+
+// mappingEntries returns the keys of a mapping in order of first appearance,
+// with merge keys (<<) expanded in place, and the node holding each key's
+// value. As in YAML merge semantics, an explicit key overrides merged ones and
+// an earlier merged mapping overrides a later one.
+func mappingEntries(node *yaml.Node) ([]string, []*yaml.Node, error) {
+	var keys []string
+	var values []*yaml.Node
+	index := make(map[string]int)
+	explicit := make(map[string]bool)
+	add := func(key string, value *yaml.Node, isExplicit bool) {
+		if i, ok := index[key]; ok {
+			if isExplicit && !explicit[key] {
+				values[i] = value
+				explicit[key] = true
+			}
+			return
+		}
+		index[key] = len(keys)
+		explicit[key] = isExplicit
+		keys = append(keys, key)
+		values = append(values, value)
+	}
+
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		keyNode, valueNode := resolveNode(node.Content[i]), node.Content[i+1]
+		if keyNode.Kind == yaml.ScalarNode && keyNode.ShortTag() == "!!merge" {
+			merged := resolveNode(valueNode)
+			sources := []*yaml.Node{merged}
+			if merged.Kind == yaml.SequenceNode {
+				sources = merged.Content
+			}
+			for _, source := range sources {
+				source = resolveNode(source)
+				if source.Kind != yaml.MappingNode {
+					continue
+				}
+				mergedKeys, mergedValues, err := mappingEntries(source)
+				if err != nil {
+					return nil, nil, err
+				}
+				for j, key := range mergedKeys {
+					add(key, mergedValues[j], false)
+				}
+			}
+			continue
+		}
+		key, err := nodeKey(keyNode)
+		if err != nil {
+			return nil, nil, err
+		}
+		add(key, valueNode, true)
+	}
+	return keys, values, nil
+}
+
+// nodeKey returns the map key a mapping key node becomes after normalizeTypes.
+func nodeKey(node *yaml.Node) (string, error) {
+	if node.Kind == yaml.ScalarNode && node.ShortTag() == "!!str" {
+		return node.Value, nil
+	}
+	var key any
+	if err := node.Decode(&key); err != nil {
+		return "", err
+	}
+	return mapKey(key), nil
 }
 
 // setInterface sets the value of v to val
 func setInterface(v any, val any) error {
 	// Normalize types to be compatible with gojq/JSON
-	normalized := normalizeTypes(val)
+	normalized, err := normalizeTypes(val)
+	if err != nil {
+		return err
+	}
+	return assign(v, normalized)
+}
 
+// assign sets v, a pointer, to the normalized value.
+func assign(v any, normalized any) error {
 	// v is a pointer to any, so we need to set it properly
 	switch ptr := v.(type) {
 	case *any:
@@ -176,43 +249,85 @@ func setInterface(v any, val any) error {
 
 // normalizeTypes converts YAML-specific types (uint, uint64, etc.) to types
 // compatible with JSON and gojq (int, float64, etc.)
-func normalizeTypes(val any) any {
+func normalizeTypes(val any) (any, error) {
 	switch v := val.(type) {
 	case uint:
-		return int(v)
+		return int(v), nil
 	case uint8:
-		return int(v)
+		return int(v), nil
 	case uint16:
-		return int(v)
+		return int(v), nil
 	case uint32:
-		return int(v)
+		return int(v), nil
 	case uint64:
 		if v <= 9007199254740992 { // Max safe integer in JSON (2^53)
-			return int(v)
+			return int(v), nil
 		}
-		return float64(v)
+		return float64(v), nil
 	case map[string]any:
 		result := make(map[string]any, len(v))
 		for key, value := range v {
-			result[key] = normalizeTypes(value)
-		}
-		if util.PreserveKeyOrder {
-			ptrOld := uintptr(reflect.ValueOf(v).UnsafePointer())
-			if keyList, ok := util.GetKeyOrder(ptrOld); ok {
-				ptrNew := uintptr(reflect.ValueOf(result).UnsafePointer())
-				util.SetKeyOrder(ptrNew, keyList)
+			normalized, err := normalizeTypes(value)
+			if err != nil {
+				return nil, err
 			}
+			result[key] = normalized
 		}
-		return result
+		return result, nil
+	case map[any]any:
+		// A mapping with a non-string key (e.g. `200: what`) decodes to
+		// map[any]any, which neither JSON nor gojq accept, so stringify the
+		// keys. Two keys can stringify to the same value (`1` and `1.0`,
+		// `true` and "true"); report that instead of keeping one at random.
+		result := make(map[string]any, len(v))
+		for key, value := range v {
+			name := mapKey(key)
+			if _, exists := result[name]; exists {
+				return nil, fmt.Errorf("yaml: mapping has more than one key that converts to %q", name)
+			}
+			normalized, err := normalizeTypes(value)
+			if err != nil {
+				return nil, err
+			}
+			result[name] = normalized
+		}
+		return result, nil
 	case []any:
 		result := make([]any, len(v))
 		for i, value := range v {
-			result[i] = normalizeTypes(value)
+			normalized, err := normalizeTypes(value)
+			if err != nil {
+				return nil, err
+			}
+			result[i] = normalized
 		}
-		return result
+		return result, nil
 	default:
-		return v
+		return v, nil
 	}
+}
+
+// mapKey returns the string form of a YAML mapping key.
+func mapKey(key any) string {
+	switch k := key.(type) {
+	case string:
+		return k
+	case nil:
+		return "null"
+	case time.Time:
+		return timestampString(k)
+	default:
+		return fmt.Sprint(k)
+	}
+}
+
+// timestampString formats a YAML timestamp: a date alone (decoded as midnight
+// UTC) as 2006-01-02, like yq, and anything else as RFC 3339.
+func timestampString(t time.Time) string {
+	if t.Location() == time.UTC && t.Equal(t.Truncate(24*time.Hour)) {
+		return t.Format(time.DateOnly)
+	}
+	return t.Format(time.RFC3339Nano)
 }
 
 // Marshal handles both single values and arrays.
@@ -256,136 +371,60 @@ func (c Codec) Marshal(v any) ([]byte, error) {
 }
 
 func marshalIndent(v any) ([]byte, error) {
-	if !util.PreserveKeyOrder {
-		var buf bytes.Buffer
-		enc := yaml.NewEncoder(&buf)
-		enc.SetIndent(2)
-		if err := enc.Encode(v); err != nil {
+	if keyorder.Enabled() {
+		node, err := orderedNode(v)
+		if err != nil {
 			return nil, err
 		}
-		return buf.Bytes(), nil
+		v = node
 	}
-
-	node, err := toYAMLNode(v)
-	if err != nil {
-		return nil, err
-	}
-
-	var docNode *yaml.Node
-	if node.Kind == yaml.DocumentNode {
-		docNode = node
-	} else {
-		docNode = &yaml.Node{
-			Kind:    yaml.DocumentNode,
-			Content: []*yaml.Node{node},
-		}
-	}
-
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
-	if err := enc.Encode(docNode); err != nil {
+	if err := enc.Encode(v); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func toYAMLNode(v any) (*yaml.Node, error) {
-	if v == nil {
-		return &yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Tag:   "!!null",
-			Value: "null",
-		}, nil
-	}
-
-	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Slice {
-		content := make([]*yaml.Node, rv.Len())
-		for i := 0; i < rv.Len(); i++ {
-			node, err := toYAMLNode(rv.Index(i).Interface())
-			if err != nil {
-				return nil, err
-			}
-			content[i] = node
-		}
-		return &yaml.Node{
-			Kind:    yaml.SequenceNode,
-			Tag:     "!!seq",
-			Content: content,
-		}, nil
-	}
-
+// orderedNode converts v to a yaml.Node whose mappings list keys in recorded
+// order. Values other than maps and arrays are encoded as the encoder would.
+func orderedNode(v any) (*yaml.Node, error) {
 	switch val := v.(type) {
-	case json.Number:
-		if _, err := val.Int64(); err == nil {
-			return &yaml.Node{
-				Kind:  yaml.ScalarNode,
-				Tag:   "!!int",
-				Value: val.String(),
-			}, nil
-		}
-		return &yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Tag:   "!!float",
-			Value: val.String(),
-		}, nil
 	case map[string]any:
-		// Determine key order
-		ptr := uintptr(reflect.ValueOf(val).UnsafePointer())
-		keys, ok := util.GetKeyOrder(ptr)
-		if !ok || len(keys) != len(val) {
-			keys = make([]string, 0, len(val))
-			for k := range val {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-		} else {
-			// Double check keys
-			for _, k := range keys {
-				if _, has := val[k]; !has {
-					keys = make([]string, 0, len(val))
-					for k2 := range val {
-						keys = append(keys, k2)
-					}
-					sort.Strings(keys)
-					break
-				}
-			}
+		if val == nil {
+			break
 		}
-
-		content := make([]*yaml.Node, 0, len(keys)*2)
-		for _, k := range keys {
-			kNode := &yaml.Node{
-				Kind:  yaml.ScalarNode,
-				Tag:   "!!str",
-				Value: k,
+		node := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		for _, key := range keyorder.Keys(val) {
+			keyNode := &yaml.Node{}
+			if err := keyNode.Encode(key); err != nil {
+				return nil, err
 			}
-			vNode, err := toYAMLNode(val[k])
+			valueNode, err := orderedNode(val[key])
 			if err != nil {
 				return nil, err
 			}
-			content = append(content, kNode, vNode)
+			node.Content = append(node.Content, keyNode, valueNode)
 		}
-		return &yaml.Node{
-			Kind:    yaml.MappingNode,
-			Tag:     "!!map",
-			Content: content,
-		}, nil
-
-	default:
-		// Fallback: marshal/unmarshal using yaml.v4
-		b, err := yaml.Marshal(val)
-		if err != nil {
-			return nil, err
+		return node, nil
+	case []any:
+		if val == nil {
+			break
 		}
-		var node yaml.Node
-		if err := yaml.Unmarshal(b, &node); err != nil {
-			return nil, err
+		node := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+		for _, item := range val {
+			itemNode, err := orderedNode(item)
+			if err != nil {
+				return nil, err
+			}
+			node.Content = append(node.Content, itemNode)
 		}
-		if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
-			return node.Content[0], nil
-		}
-		return &node, nil
+		return node, nil
 	}
+	node := &yaml.Node{}
+	if err := node.Encode(v); err != nil {
+		return nil, err
+	}
+	return node, nil
 }

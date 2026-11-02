@@ -3,6 +3,7 @@ package cbor
 import (
 	"reflect"
 
+	"github.com/JFryy/qq/codec/util"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -23,7 +24,13 @@ func init() {
 type Codec struct{}
 
 func (c *Codec) Unmarshal(data []byte, v any) error {
-	return decMode.Unmarshal(data, v)
+	if err := decMode.Unmarshal(data, v); err != nil {
+		return err
+	}
+	if ptr, ok := v.(*any); ok {
+		*ptr = util.NormalizeNumbers(*ptr)
+	}
+	return nil
 }
 
 func (c *Codec) Marshal(v any) ([]byte, error) {

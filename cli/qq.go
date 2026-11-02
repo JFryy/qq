@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/JFryy/qq/codec"
+	qqjson "github.com/JFryy/qq/codec/json"
+	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/JFryy/qq/internal/tui"
 	"github.com/goccy/go-json"
 	"github.com/itchyny/gojq"
@@ -27,7 +29,6 @@ func CreateRootCmd() *cobra.Command {
 	var exitStatus bool
 	var preserveKeyOrder bool
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
-	v := "v0.3.4"
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
 		Use:   "qq [expression] [file] [flags] \n  cat [file] | qq [expression] [flags] \n  qq -I file",
@@ -36,7 +37,7 @@ func CreateRootCmd() *cobra.Command {
 		Long: desc,
 		Run: func(cmd *cobra.Command, args []string) {
 			if version {
-				fmt.Println("qq version", v)
+				fmt.Println("qq version", resolveVersion())
 				os.Exit(0)
 			}
 			if len(args) == 0 && !cmd.Flags().Changed("input") && !cmd.Flags().Changed("output") && !cmd.Flags().Changed("raw-input") && isTerminal(os.Stdin) {
@@ -60,13 +61,12 @@ func CreateRootCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&stream, "stream", false, "parse input in streaming fashion, emitting path-value pairs (supports: json, jsonl, yaml, csv, tsv, line)")
 	cmd.Flags().BoolVarP(&slurp, "slurp", "s", false, "read all inputs into an array and use it as the single input value")
 	cmd.Flags().BoolVarP(&exitStatus, "exit-status", "e", false, "set exit status code based on the output")
-	cmd.Flags().BoolVarP(&preserveKeyOrder, "preserve-key-order", "k", false, "preserve order of keys in JSON and YAML output")
+	cmd.Flags().BoolVarP(&preserveKeyOrder, "preserve-key-order", "k", false, "keep input key order for objects the query passes through unchanged; objects it creates or modifies have sorted keys (input: json, jsonc, jsonl, yaml, xml, csv, tsv; output: json, jsonl, yaml, xml, csv, tsv)")
 
 	return cmd
 }
 
 func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool) {
-	codec.SetPreserveKeyOrder(preserveKeyOrder)
 	var input []byte
 	var err error
 	var expression string
@@ -94,6 +94,17 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 	// Validate: slurp and interactive are mutually exclusive
 	if slurp && interactive {
 		fmt.Println("Error: --slurp and --interactive flags cannot be used together")
+		os.Exit(1)
+	}
+
+	// Validate: streaming already emits paths in document order, and
+	// interactive mode re-encodes query results without recorded key order.
+	if preserveKeyOrder && stream {
+		fmt.Println("Error: --preserve-key-order and --stream flags cannot be used together")
+		os.Exit(1)
+	}
+	if preserveKeyOrder && interactive {
+		fmt.Println("Error: --preserve-key-order and --interactive flags cannot be used together")
 		os.Exit(1)
 	}
 
@@ -211,6 +222,11 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 	// Standard (non-streaming) mode
 	var data any
 
+	// Key order is recorded only while the input is decoded; output encoders
+	// then read it.
+	if preserveKeyOrder {
+		keyorder.Enable()
+	}
 	if slurp {
 		// Slurp mode: read multiple JSON values and combine into array
 		data, err = slurpInputs(input, inputCodec)
@@ -225,6 +241,7 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 			os.Exit(1)
 		}
 	}
+	keyorder.StopRecording()
 
 	if !interactive {
 		query, err := gojq.Parse(expression)
@@ -329,17 +346,11 @@ func slurpInputs(input []byte, inputCodec codec.EncodingType) (any, error) {
 	switch inputCodec {
 	case codec.JSON:
 		// JSON can have multiple whitespace-separated values
-		decoder := json.NewDecoder(bytes.NewReader(input))
-		for {
-			var value any
-			if err := decoder.Decode(&value); err != nil {
-				if err == io.EOF {
-					break
-				}
-				return nil, fmt.Errorf("error parsing JSON: %v", err)
-			}
-			values = append(values, value)
+		parsed, err := qqjson.UnmarshalAll(input)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing JSON: %v", err)
 		}
+		values = append(values, parsed...)
 
 	case codec.JSONL:
 		// JSONL already parses to array of values

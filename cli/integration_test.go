@@ -9,21 +9,23 @@ import (
 	"testing"
 
 	"github.com/JFryy/qq/codec"
+	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/itchyny/gojq"
 )
 
 // runPipeline is an E2E helper that parses input, executes a JQ expression,
 // and captures the serialized output printed by executeQuery.
 func runPipeline(t *testing.T, input []byte, inputFormat codec.EncodingType, outputFormat codec.EncodingType, queryStr string, preserveKeyOrder bool, rawOut bool) (string, error) {
-	codec.SetPreserveKeyOrder(preserveKeyOrder)
-	defer func() {
-		codec.SetPreserveKeyOrder(false)
-	}()
+	if preserveKeyOrder {
+		keyorder.Enable()
+	}
+	defer keyorder.Disable()
 
 	var data any
 	if err := codec.Unmarshal(input, inputFormat, &data); err != nil {
 		return "", fmt.Errorf("unmarshal error: %w", err)
 	}
+	keyorder.StopRecording()
 
 	q, err := gojq.Parse(queryStr)
 	if err != nil {
@@ -187,11 +189,13 @@ mango: 3
 		{
 			name:         "XML output",
 			outputFormat: codec.XML,
-			expected: `<root>
-  <zebra>1</zebra>
-  <apple>2</apple>
-  <mango>3</mango>
-</root>`,
+			expected: `<doc>
+  <root>
+    <zebra>1</zebra>
+    <apple>2</apple>
+    <mango>3</mango>
+  </root>
+</doc>`,
 		},
 	}
 
@@ -211,8 +215,6 @@ mango: 3
 		})
 	}
 }
-
-
 
 func TestE2E_EdgeCases(t *testing.T) {
 	// Unicode and special characters

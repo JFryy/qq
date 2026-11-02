@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/goccy/go-json"
 )
 
@@ -104,7 +105,7 @@ func streamJSONL(reader io.Reader, dataChan chan<- any) error {
 		}
 
 		var obj any
-		if err := json.Unmarshal([]byte(line), &obj); err != nil {
+		if err := qqjson.Unmarshal([]byte(line), &obj); err != nil {
 			return fmt.Errorf("error parsing JSON on line %d: %v", index+1, err)
 		}
 
@@ -438,11 +439,11 @@ func parseStreamToChannel(decoder *json.Decoder, path []any, dataChan chan<- any
 
 		// Convert json.Number to appropriate type
 		if num, ok := t.(json.Number); ok {
-			if intVal, err := num.Int64(); err == nil {
-				t = float64(intVal)
-			} else if floatVal, err := num.Float64(); err == nil {
-				t = floatVal
+			normalized, err := qqjson.NormalizeNumbers(num)
+			if err != nil {
+				return err
 			}
+			t = normalized
 		}
 
 		dataChan <- []any{pathCopy, t}

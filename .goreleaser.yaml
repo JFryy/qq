@@ -1,0 +1,42 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy -diff
+
+builds:
+  - id: qq
+    binary: qq
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    # Do not use -trimpath: Go omits linker flags from build info with it enabled.
+    # Publication checks these flags in every platform's binary.
+    ldflags:
+      - -s -w -X github.com/JFryy/qq/cli.Version={{ .Tag }}
+
+archives:
+  - id: qq
+    # Matches the asset names of previous releases so existing download links keep working.
+    name_template: "qq-{{ .Tag }}-{{ .Os }}-{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+# The workflow supplies GitHub notes pinned to the build commit.
+changelog:
+  use: git
+
+release:
+  draft: true
+  replace_existing_draft: true
+  # The tag is not pushed before the draft exists; GitHub creates it at this commit on publish.
+  target_commitish: "{{ .FullCommit }}"
