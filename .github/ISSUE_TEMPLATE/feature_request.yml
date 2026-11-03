@@ -1,0 +1,33 @@
+name: Feature or format request
+description: Suggest a new feature, flag, or encoding
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type
+      options:
+        - New format / codec
+        - Improvement to an existing format
+        - CLI or interactive mode feature
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do, and what is missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: For a new format, include its file extensions, whether it needs read and write support, and a candidate Go library if you know one.
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to open a pull request for this
