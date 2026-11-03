@@ -28,6 +28,8 @@ func CreateRootCmd() *cobra.Command {
 	var slurp bool
 	var exitStatus bool
 	var preserveKeyOrder bool
+	var splitExp string
+	var overwrite bool
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
@@ -48,7 +50,7 @@ func CreateRootCmd() *cobra.Command {
 				}
 				os.Exit(0)
 			}
-			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, preserveKeyOrder)
+			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, preserveKeyOrder, splitExp, overwrite)
 		},
 	}
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
@@ -62,11 +64,13 @@ func CreateRootCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&slurp, "slurp", "s", false, "read all inputs into an array and use it as the single input value")
 	cmd.Flags().BoolVarP(&exitStatus, "exit-status", "e", false, "set exit status code based on the output")
 	cmd.Flags().BoolVarP(&preserveKeyOrder, "preserve-key-order", "k", false, "keep input key order for objects the query passes through unchanged; objects it creates or modifies have sorted keys (input: json, jsonc, jsonl, yaml, xml, csv, tsv; output: json, jsonl, yaml, xml, csv, tsv)")
+	cmd.Flags().StringVar(&splitExp, "split-exp", "", "write each result to its own file named by this expression, plus the output format's extension, in the current directory")
+	cmd.Flags().BoolVar(&overwrite, "overwrite", false, "allow --split-exp to replace existing files")
 
 	return cmd
 }
 
-func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool) {
+func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool, splitExp string, overwrite bool) {
 	var input []byte
 	var err error
 	var expression string
@@ -105,6 +109,21 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 	}
 	if preserveKeyOrder && interactive {
 		fmt.Println("Error: --preserve-key-order and --interactive flags cannot be used together")
+		os.Exit(1)
+	}
+
+	// Validate: split output is written to files, not the terminal or a stream.
+	splitSet := cmd.Flags().Changed("split-exp")
+	if splitSet && stream {
+		fmt.Println("Error: --split-exp and --stream flags cannot be used together")
+		os.Exit(1)
+	}
+	if splitSet && interactive {
+		fmt.Println("Error: --split-exp and --interactive flags cannot be used together")
+		os.Exit(1)
+	}
+	if overwrite && !splitSet {
+		fmt.Println("Error: --overwrite requires --split-exp")
 		os.Exit(1)
 	}
 
@@ -248,6 +267,19 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 		if err != nil {
 			fmt.Printf("Error parsing jq expression: %v\n", err)
 			os.Exit(1)
+		}
+
+		if splitSet {
+			nameQuery, err := gojq.Parse(splitExp)
+			if err != nil {
+				fmt.Printf("Error parsing split expression: %v\n", err)
+				os.Exit(1)
+			}
+			if err := writeSplitResults(query, nameQuery, data, outputCodec, ".", overwrite); err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			os.Exit(0)
 		}
 
 		exitCode := executeQuery(query, data, outputCodec, rawInput, monochrome, exitStatus)
