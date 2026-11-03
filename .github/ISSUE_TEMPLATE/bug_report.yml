@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in qq produces wrong output, errors, or crashes
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: qq version
+      description: Output of `qq --version`
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and install method
+      placeholder: macOS 14 arm64, Homebrew
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The exact command you ran
+      render: sh
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Minimal input
+      description: The smallest input that reproduces the problem
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual output
+      description: Include any error messages
+    validations:
+      required: true
