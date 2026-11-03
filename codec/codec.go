@@ -182,12 +182,22 @@ func Unmarshal(input []byte, inputFileType EncodingType, data any) error {
 }
 
 func Marshal(v any, outputFileType EncodingType) ([]byte, error) {
-	if v == nil {
-		return nil, fmt.Errorf("input data cannot be nil")
-	}
 	codec, ok := Codecs[outputFileType]
 	if !ok {
 		return nil, fmt.Errorf("unsupported output file type: %v", outputFileType)
+	}
+	// jq prints null for a null result. Go's nil is that value; rejecting it made
+	// `.missing`, `null`, and `.a // null` fail with "input data cannot be nil".
+	if v == nil {
+		if IsBinaryFormat(outputFileType) {
+			return nil, fmt.Errorf("input data cannot be nil")
+		}
+		data, err := codec.Marshal(v)
+		if err != nil {
+			// Some text codecs still refuse nil; JSON null is the closest match.
+			return []byte("null"), nil
+		}
+		return data, nil
 	}
 	data, err := codec.Marshal(v)
 	if err != nil {

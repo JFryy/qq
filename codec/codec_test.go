@@ -44,6 +44,21 @@ func TestGetEncodingType(t *testing.T) {
 	}
 }
 
+func TestMarshalNull(t *testing.T) {
+	// jq prints null for a null result; Marshal must not reject Go nil for text formats.
+	out, err := Marshal(nil, JSON)
+	if err != nil {
+		t.Fatalf("Marshal(nil, JSON) error: %v", err)
+	}
+	if string(out) != "null" {
+		t.Fatalf("Marshal(nil, JSON) = %q, want \"null\"", string(out))
+	}
+
+	if _, err := Marshal(nil, PARQUET); err == nil {
+		t.Fatal("Marshal(nil, PARQUET) expected error for binary format")
+	}
+}
+
 func TestMarshal(t *testing.T) {
 	data := map[string]any{"key": "value"}
 	tests := []struct {

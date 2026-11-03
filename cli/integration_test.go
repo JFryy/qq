@@ -216,6 +216,29 @@ mango: 3
 	}
 }
 
+func TestE2E_NullResultsPrintNull(t *testing.T) {
+	// Missing keys and literal null must print "null" like jq (#80), not fail formatting.
+	cases := []struct {
+		name  string
+		input []byte
+		query string
+	}{
+		{"missing key", []byte(`{}`), ".missing"},
+		{"literal null", []byte(`{}`), "null"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := runPipeline(t, tt.input, codec.JSON, codec.JSON, tt.query, false, false)
+			if err != nil {
+				t.Fatalf("pipeline failed: %v", err)
+			}
+			if strings.TrimSpace(got) != "null" {
+				t.Fatalf("got %q, want \"null\"", strings.TrimSpace(got))
+			}
+		})
+	}
+}
+
 func TestE2E_EdgeCases(t *testing.T) {
 	// Unicode and special characters
 	unicodeInput := []byte("name,cél\nJosé,value\n")

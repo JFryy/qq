@@ -208,6 +208,12 @@ test_gojq_functionality() {
     run_test "null coalescing" \
         "echo '{\"a\":null}' | bin/qq '.a // \"default\"' | grep -q 'default'"
 
+    run_test "missing key prints null like jq" \
+        "echo '{}' | bin/qq '.missing' | grep -qx 'null'"
+
+    run_test "literal null query prints null" \
+        "echo '{}' | bin/qq 'null' | grep -qx 'null'"
+
     # Sorting
     run_test "sort array" \
         "echo '[3,1,2]' | bin/qq 'sort' | jq -e '. == [1,2,3]'"
