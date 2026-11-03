@@ -154,7 +154,7 @@ echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 
 ## Contributions
 
-All contributions are welcome to `qq`, especially for upkeep/optimization/addition of new encodings.
+All contributions are welcome to `qq`, especially for upkeep/optimization/addition of new encodings. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and how to add a codec.
 
 ## Thanks and Acknowledgements / Related Projects
 
