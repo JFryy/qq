@@ -143,6 +143,15 @@ test_gojq_functionality() {
     run_test "nested key access" \
         "echo '{\"a\":{\"b\":\"value\"}}' | bin/qq '.a.b' | grep -q 'value'"
 
+    run_test "query file with YAML input" \
+        "bin/qq --from-file tests/queries/nested.jq tests/test.yaml | grep -qx 42"
+    run_test "query file with piped JSON input" \
+        "echo '{\"test\":{\"thing\":{\"example\":7}}}' | bin/qq -f tests/queries/nested.jq | grep -qx 7"
+    run_test "missing query file fails" \
+        "! bin/qq -f tests/queries/missing.jq tests/test.yaml"
+    run_test "query file with an extra argument fails" \
+        "! bin/qq -f tests/queries/nested.jq '.' tests/test.yaml"
+
     run_test "array index" \
         "echo '[1,2,3]' | bin/qq '.[1]' | grep -q '^2$'"
 

@@ -18,7 +18,7 @@ import (
 )
 
 func CreateRootCmd() *cobra.Command {
-	var inputType, outputType string
+	var inputType, outputType, queryFile string
 	var rawOutput bool
 	var interactive bool
 	var version bool
@@ -31,7 +31,7 @@ func CreateRootCmd() *cobra.Command {
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
-		Use:   "qq [expression] [file] [flags] \n  cat [file] | qq [expression] [flags] \n  qq -I file",
+		Use:   "qq [expression] [file] [flags] \n  cat [file] | qq [expression] [flags] \n  qq -I file \n  qq --from-file query.jq [file]",
 		Short: "qq - JQ processing with conversions for popular configuration formats.",
 
 		Long: desc,
@@ -40,7 +40,7 @@ func CreateRootCmd() *cobra.Command {
 				fmt.Println("qq version", resolveVersion())
 				os.Exit(0)
 			}
-			if len(args) == 0 && !cmd.Flags().Changed("input") && !cmd.Flags().Changed("output") && !cmd.Flags().Changed("raw-input") && isTerminal(os.Stdin) {
+			if len(args) == 0 && !cmd.Flags().Changed("from-file") && !cmd.Flags().Changed("input") && !cmd.Flags().Changed("output") && !cmd.Flags().Changed("raw-input") && isTerminal(os.Stdin) {
 				err := cmd.Help()
 				if err != nil {
 					fmt.Println(err)
@@ -48,9 +48,10 @@ func CreateRootCmd() *cobra.Command {
 				}
 				os.Exit(0)
 			}
-			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, preserveKeyOrder)
+			handleCommand(cmd, args, queryFile, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, preserveKeyOrder)
 		},
 	}
+	cmd.Flags().StringVarP(&queryFile, "from-file", "f", "", "read the jq expression from a file")
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
 	cmd.Flags().StringVarP(&outputType, "output", "o", "json", "specify output file type by extension name. This is inferred from extension if passing file position argument.")
 	cmd.Flags().BoolVarP(&rawOutput, "raw-output", "r", false, "output strings without escapes and quotes.")
@@ -63,13 +64,14 @@ func CreateRootCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&exitStatus, "exit-status", "e", false, "set exit status code based on the output")
 	cmd.Flags().BoolVarP(&preserveKeyOrder, "preserve-key-order", "k", false, "keep input key order for objects the query passes through unchanged; objects it creates or modifies have sorted keys (input: json, jsonc, jsonl, yaml, xml, csv, tsv; output: json, jsonl, yaml, xml, csv, tsv)")
 
+	cmd.MarkFlagsMutuallyExclusive("from-file", "interactive")
+
 	return cmd
 }
 
-func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool) {
+func handleCommand(cmd *cobra.Command, args []string, queryFile string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool) {
 	var input []byte
 	var err error
-	var expression string
 	var filename string
 	var inputReader io.Reader
 
@@ -108,67 +110,37 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 		os.Exit(1)
 	}
 
-	// handle input with stdin or file
-	switch len(args) {
-	case 0:
-		expression = "."
+	expression := "."
+	if cmd.Flags().Changed("from-file") {
+		query, err := os.ReadFile(queryFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading jq expression: %v\n", err)
+			os.Exit(1)
+		}
+		expression = string(query)
+	} else if len(args) > 0 && (len(args) != 1 || !isFile(args[0])) {
+		expression, args = args[0], args[1:]
+	}
+
+	if len(args) > 1 {
+		fmt.Fprintln(os.Stderr, "Error: expected at most one input file")
+		os.Exit(1)
+	}
+	if len(args) == 1 {
+		filename = args[0]
 		if stream {
-			inputReader = os.Stdin
+			inputReader, err = os.Open(filename)
 		} else {
-			input, err = io.ReadAll(os.Stdin)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			input, err = os.ReadFile(filename)
 		}
-	case 1:
-		if isFile(args[0]) {
-			filename = args[0]
-			expression = "."
-			if stream {
-				file, err := os.Open(args[0])
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-				inputReader = file
-			} else {
-				// read file content by name
-				input, err = os.ReadFile(args[0])
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-			}
-		} else {
-			expression = args[0]
-			if stream {
-				inputReader = os.Stdin
-			} else {
-				input, err = io.ReadAll(os.Stdin)
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-			}
-		}
-	case 2:
-		filename = args[1]
-		expression = args[0]
-		if stream {
-			file, err := os.Open(args[1])
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			inputReader = file
-		} else {
-			input, err = os.ReadFile(args[1])
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-		}
+	} else if stream {
+		inputReader = os.Stdin
+	} else {
+		input, err = io.ReadAll(os.Stdin)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	var inputCodec codec.EncodingType

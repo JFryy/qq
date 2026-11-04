@@ -56,6 +56,10 @@ cat file.${ext} | qq -i ${ext}
 # Extension is parsed, no need for input flag
 qq '.' file.xml
 
+# Keep a multiline jq expression in a file and reuse it with file or piped input
+qq --from-file transform.jq config.yaml
+cat config.yaml | qq -i yaml -f transform.jq
+
 # random example: query xml, grep with gron using qq io and output as json
 qq file.xml -o gron | grep -vE "sweet.potatoes" | qq -i gron
 
