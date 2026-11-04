@@ -17,7 +17,7 @@ Read-only: `.proto`, `.env`
 
 ## Transcoding Between Formats
 
-Any input format can be transcoded to any output format in a single command. Use `-i`/`--input` and `-o`/`--output` to specify formats explicitly, or let `qq` detect them from the file extension.
+Any input format can be transcoded to any output format in a single command. `qq` detects the input format from the file extension (or use `-i`/`--input`, which is required for stdin). The output format is never inferred: it is JSON unless you pick another with `-o`/`--output`, and results are always written to stdout, so redirect them to save a file (`qq '.' config.yaml -o toml > config.toml`).
 
 ```sh
 # YAML → JSON

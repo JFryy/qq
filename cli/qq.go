@@ -52,7 +52,7 @@ func CreateRootCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
-	cmd.Flags().StringVarP(&outputType, "output", "o", "json", "specify output file type by extension name. This is inferred from extension if passing file position argument.")
+	cmd.Flags().StringVarP(&outputType, "output", "o", "json", "output format, by name or extension (e.g. yaml, toml, csv). Written to stdout; not inferred from the input file.")
 	cmd.Flags().BoolVarP(&rawOutput, "raw-output", "r", false, "output strings without escapes and quotes.")
 	cmd.Flags().BoolVarP(&help, "help", "h", false, "help for qq")
 	cmd.Flags().BoolVarP(&version, "version", "v", false, "version for qq")

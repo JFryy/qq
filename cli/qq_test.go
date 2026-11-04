@@ -260,3 +260,20 @@ func TestHelpFlag(t *testing.T) {
 		t.Error("Help text should mention input/output flags")
 	}
 }
+
+func TestOutputFlagDescribesFormat(t *testing.T) {
+	flag := CreateRootCmd().Flags().Lookup("output")
+	if flag == nil {
+		t.Fatal("output flag should exist")
+	}
+	if flag.DefValue != "json" {
+		t.Errorf("output flag default = %q, want json", flag.DefValue)
+	}
+	usage := strings.ToLower(flag.Usage)
+	if !strings.Contains(usage, "output format") {
+		t.Errorf("output flag usage should describe the output format, got %q", flag.Usage)
+	}
+	if strings.Contains(usage, "output file type") {
+		t.Errorf("output flag usage should not suggest qq writes a file, got %q", flag.Usage)
+	}
+}
