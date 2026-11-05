@@ -11,9 +11,9 @@
 
 ![Demo GIF](docs/demo.gif)
 
-Supported formats (read/write): `.json`, `.yaml`/`.yml`, `.toml`, `.xml`, `.hcl`/`.tf`, `.csv`, `.tsv`, `.ini`, `.properties`, `.gron`, `.html`, `.jsonl`/`.ndjson`/`.jsonlines`, `.jsonc`, `.parquet`, `.msgpack`/`.mpk`, `.cbor`, `.avro`, `.base64`/`.b64`, `.txt`/`.text`,
+Supported formats (read/write): `.json`, `.yaml`/`.yml`, `.toml`, `.xml`, `.hcl`/`.tf`, `.csv`, `.tsv`, `.ini`, `.properties`, `.gron`, `.jsonl`/`.ndjson`/`.jsonlines`, `.jsonc`, `.parquet`, `.msgpack`/`.mpk`, `.cbor`, `.avro`, `.base64`/`.b64`, `.env`
 
-Read-only: `.proto`, `.env`
+Read-only (output falls back to another encoder): `.html` (written as XML), `.txt`/`.text`/line and `.proto` (written as JSON)
 
 ## Transcoding Between Formats
 
@@ -65,7 +65,8 @@ curl motherfuckingwebsite.com | bin/qq -i html '.html.body.ul.li[0]'
 # interactive query builder mode on target file
 qq . file.json --interactive
 
-# streaming mode - works with JSON, YAML, CSV and more
+# streaming mode - parses JSON, JSONL, YAML, line/txt, CSV and TSV incrementally;
+# other formats are read fully, then emitted as path/value pairs
 qq --stream 'select(length == 2)' large.json
 
 # slurp mode - read multiple inputs into an array
@@ -149,7 +150,7 @@ echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 * Support a wide range of configuration formats and transform them interchangeably between each other.
 * Quick and comprehensive querying of configuration formats without needing a pipeline of dedicated tools.
 * Provide an interactive mode for building queries with autocomplete and realtime rendering preview.
-* Streaming mode (`--stream`) (identical to jq's `--stream`), plus extended support for JSONL, YAML, CSV, TSV, and line-delimited formats - all emit path-value pairs for memory-efficient processing of large files.
+* Streaming mode (`--stream`) (identical to jq's `--stream`) emits path-value pairs. JSON, JSONL, YAML, line/txt, CSV and TSV are parsed incrementally for memory-efficient processing of large files; other formats are read fully and then converted to path-value pairs.
 * `qq` is broad, but performant encodings are still a priority, execution is quite fast despite covering a broad range of codecs. `qq` performs comparitively with dedicated tools for a given format.
 
 ## Contributions
