@@ -27,6 +27,12 @@ make test
 - Add or update tests for any behaviour change.
 - Update `README.md` if you add a flag, format, or user-visible behaviour.
 
+## AI-assisted contributions
+
+AI-assisted pull requests are permitted. You are responsible for the change: review and understand every line, test it locally, and be ready to explain and revise it during review.
+
+Drive-by pull requests generated mostly by AI with minimal human involvement will be closed. This includes changes that were not tested, do not address an existing issue or clear problem, or whose author cannot answer questions about them without AI assistance.
+
 ## Project layout
 
 - `cli/`: command-line interface and interactive mode.

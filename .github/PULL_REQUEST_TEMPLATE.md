@@ -1,23 +1,18 @@
-## Description
-🚀 **Issue: (or just decribe the problem if one isn't present for your change)
+## Summary
 
+<!-- What does this change and why? Link the issue if there is one (e.g. Closes #123), otherwise describe the problem. -->
 
+## Testing
 
-## Changes
+<!-- How did you verify this? Commands run, inputs tried, edge cases covered. -->
 
-- [ ] **🛠️ Code Changes**
-  - [ ] Implemented feature 
-  - [ ] Fixed bug
-  - [ ] Refactored component 
-  - [ ] Updated documentation
+## Checklist
 
-- [ ] **🐛 Testing**
-  - [ ] Added unit tests for new functionality
-  - [ ] Updated existing tests to reflect changes
-  - [ ] Ran all tests locally
+- [ ] `gofmt -l .`, `go vet ./...` and `make test` pass locally
+- [ ] Tests added or updated for any behaviour change
+- [ ] `README.md` updated for new flags, formats, or user-visible behaviour
+- [ ] I have reviewed and understand every line of this change, including any AI-assisted code
 
-- [ ] **📄 Documentation**
-  - [ ] Updated README or documentation files as needed
+## Notes
 
-## Additional Notes
-
+<!-- Optional: anything reviewers should know, such as tradeoffs, follow-ups, or open questions. -->
