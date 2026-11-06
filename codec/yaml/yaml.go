@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/JFryy/qq/codec/indent"
 	"github.com/JFryy/qq/codec/keyorder"
 	"go.yaml.in/yaml/v4"
 )
@@ -382,7 +383,9 @@ func marshalIndent(v any) ([]byte, error) {
 	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
+	// YAML needs at least 2 spaces of indentation; the encoder would raise
+	// smaller values to 2 anyway, so do it explicitly.
+	enc.SetIndent(max(indent.Width(), 2))
 	if err := enc.Encode(v); err != nil {
 		return nil, err
 	}

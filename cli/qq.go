@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/JFryy/qq/codec"
+	"github.com/JFryy/qq/codec/indent"
 	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/JFryy/qq/internal/tui"
@@ -28,6 +29,7 @@ func CreateRootCmd() *cobra.Command {
 	var slurp bool
 	var exitStatus bool
 	var preserveKeyOrder bool
+	var indentWidth int
 	encodings := strings.Join(codec.GetSupportedExtensions(), ", ")
 	desc := fmt.Sprintf("qq is a interoperable configuration format transcoder with jq querying ability powered by gojq. qq is multi modal, and can be used as a replacement for jq or be interacted with via a repl with autocomplete and realtime rendering preview for building queries. Supported formats include %s", encodings)
 	cmd := &cobra.Command{
@@ -48,7 +50,7 @@ func CreateRootCmd() *cobra.Command {
 				}
 				os.Exit(0)
 			}
-			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, preserveKeyOrder)
+			handleCommand(cmd, args, inputType, outputType, rawOutput, help, interactive, monochrome, stream, slurp, exitStatus, preserveKeyOrder, indentWidth)
 		},
 	}
 	cmd.Flags().StringVarP(&inputType, "input", "i", "json", "specify input file type, only required on parsing stdin.")
@@ -62,11 +64,12 @@ func CreateRootCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&slurp, "slurp", "s", false, "read all inputs into an array and use it as the single input value")
 	cmd.Flags().BoolVarP(&exitStatus, "exit-status", "e", false, "set exit status code based on the output")
 	cmd.Flags().BoolVarP(&preserveKeyOrder, "preserve-key-order", "k", false, "keep input key order for objects the query passes through unchanged; objects it creates or modifies have sorted keys (input: json, jsonc, jsonl, yaml, xml, csv, tsv; output: json, jsonl, yaml, xml, csv, tsv)")
+	cmd.Flags().IntVar(&indentWidth, "indent", indent.Default, "number of spaces to indent output (0-7); 0 prints compact JSON. Applies to json, jsonc, yaml (minimum 2), line, txt and proto output; ignored by other formats, --stream and interactive mode")
 
 	return cmd
 }
 
-func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool) {
+func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputtype string, rawInput bool, help bool, interactive bool, monochrome bool, stream bool, slurp bool, exitStatus bool, preserveKeyOrder bool, indentWidth int) {
 	var input []byte
 	var err error
 	var expression string
@@ -105,6 +108,10 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 	}
 	if preserveKeyOrder && interactive {
 		fmt.Println("Error: --preserve-key-order and --interactive flags cannot be used together")
+		os.Exit(1)
+	}
+	if err := indent.Validate(indentWidth); err != nil {
+		fmt.Println("Error:", err)
 		os.Exit(1)
 	}
 
@@ -250,6 +257,7 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 			os.Exit(1)
 		}
 
+		_ = indent.Set(indentWidth)
 		exitCode := executeQuery(query, data, outputCodec, rawInput, monochrome, exitStatus)
 		os.Exit(exitCode)
 	}
@@ -278,6 +286,8 @@ func handleCommand(cmd *cobra.Command, args []string, inputtype string, outputty
 	}
 
 	fmt.Fprintf(os.Stderr, "\033[36m# Query: %s\033[0m\n", queryExpr)
+	// Set the width only now, so the TUI buffer above keeps its 2-space view.
+	_ = indent.Set(indentWidth)
 	exitCode := executeQuery(query, data, outputCodec, rawInput, monochrome, exitStatus)
 	os.Exit(exitCode)
 }

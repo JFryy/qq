@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/JFryy/qq/codec/indent"
+	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/goccy/go-json"
 )
 
@@ -217,6 +219,70 @@ func TestJSONMarshalEmptyValues(t *testing.T) {
 			err = json.Unmarshal(data, &result)
 			if err != nil {
 				t.Fatalf("Marshaled %s is not valid JSON: %v", tc.name, err)
+			}
+		})
+	}
+}
+
+func TestJSONMarshalIndent(t *testing.T) {
+	t.Cleanup(indent.Reset)
+
+	tests := []struct {
+		name  string
+		width int
+		want  string
+	}{
+		{"compact", 0, `{"a":1,"b":{"c":[1,2]}}`},
+		{"default", indent.Default, "{\n  \"a\": 1,\n  \"b\": {\n    \"c\": [\n      1,\n      2\n    ]\n  }\n}"},
+		{"four", 4, "{\n    \"a\": 1,\n    \"b\": {\n        \"c\": [\n            1,\n            2\n        ]\n    }\n}"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := indent.Set(tt.width); err != nil {
+				t.Fatal(err)
+			}
+			v := map[string]any{"b": map[string]any{"c": []any{1, 2}}, "a": 1}
+			got, err := (&Codec{}).Marshal(v)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tt.want {
+				t.Errorf("Marshal() =\n%s\nwant\n%s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestJSONMarshalIndentPreserveKeyOrder(t *testing.T) {
+	t.Cleanup(indent.Reset)
+	keyorder.Enable()
+	t.Cleanup(keyorder.Disable)
+
+	inner := map[string]any{"c": []any{1, 2}}
+	v := map[string]any{"b": inner, "a": 1}
+	keyorder.Record(inner, []string{"c"})
+	keyorder.Record(v, []string{"b", "a"})
+
+	tests := []struct {
+		name  string
+		width int
+		want  string
+	}{
+		{"compact", 0, `{"b":{"c":[1,2]},"a":1}`},
+		{"default", indent.Default, "{\n  \"b\": {\n    \"c\": [\n      1,\n      2\n    ]\n  },\n  \"a\": 1\n}"},
+		{"four", 4, "{\n    \"b\": {\n        \"c\": [\n            1,\n            2\n        ]\n    },\n    \"a\": 1\n}"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := indent.Set(tt.width); err != nil {
+				t.Fatal(err)
+			}
+			got, err := (&Codec{}).Marshal(v)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tt.want {
+				t.Errorf("Marshal() =\n%s\nwant\n%s", got, tt.want)
 			}
 		})
 	}

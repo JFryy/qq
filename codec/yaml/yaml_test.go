@@ -3,6 +3,8 @@ package yaml
 import (
 	"strings"
 	"testing"
+
+	"github.com/JFryy/qq/codec/indent"
 )
 
 // Helper function to check numeric values that might be int, int64, uint64, or float64
@@ -632,6 +634,36 @@ func TestYAMLNonStringKeyCollision(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tt.errText) {
 				t.Errorf("Expected error containing %q, got: %v", tt.errText, err)
+			}
+		})
+	}
+}
+
+func TestYAMLMarshalIndent(t *testing.T) {
+	t.Cleanup(indent.Reset)
+
+	twoSpaces := "a:\n  b: 1\n"
+	tests := []struct {
+		name  string
+		width int
+		want  string
+	}{
+		{"zero falls back to 2", 0, twoSpaces},
+		{"one falls back to 2", 1, twoSpaces},
+		{"default", indent.Default, twoSpaces},
+		{"four", 4, "a:\n    b: 1\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := indent.Set(tt.width); err != nil {
+				t.Fatal(err)
+			}
+			got, err := Codec{}.Marshal(map[string]any{"a": map[string]any{"b": 1}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tt.want {
+				t.Errorf("Marshal() = %q, want %q", got, tt.want)
 			}
 		})
 	}

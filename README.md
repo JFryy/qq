@@ -75,6 +75,11 @@ echo -e '{"id":1}\n{"id":2}' | qq -s 'map(.id)'
 # preserve input key order (objects the query creates or modifies have sorted keys)
 qq -k '.spec' deployment.yaml -o json
 
+# set output indentation, 0-7 spaces (0 = compact JSON); applies to json, jsonc,
+# yaml (minimum 2) and line/txt/proto output - other formats ignore it
+qq --indent 4 . file.json
+qq --indent 0 '.items' file.yaml
+
 # exit-status - use in conditionals
 echo '{"active":true}' | qq -e '.active' && echo "is active"
 ```
@@ -151,6 +156,7 @@ echo '{"foo":"bar"}' | docker run -i jfryy/qq '.foo = "bazz"' -o tf
 * Quick and comprehensive querying of configuration formats without needing a pipeline of dedicated tools.
 * Provide an interactive mode for building queries with autocomplete and realtime rendering preview.
 * Streaming mode (`--stream`) (identical to jq's `--stream`) emits path-value pairs. JSON, JSONL, YAML, line/txt, CSV and TSV are parsed incrementally for memory-efficient processing of large files; other formats are read fully and then converted to path-value pairs.
+* `--indent n` (0-7, default 2, like jq's `--indent`) sets the output indentation for JSON, JSONC, YAML and line/txt/proto output; `--indent 0` prints compact single-line JSON/JSONC. YAML always uses at least 2 spaces. XML (fixed 2 spaces), JSONL, TOML, HCL, CSV/TSV, INI, gron, env, properties, base64, the binary formats, `--stream` output and the interactive view ignore it.
 * `qq` is broad, but performant encodings are still a priority, execution is quite fast despite covering a broad range of codecs. `qq` performs comparitively with dedicated tools for a given format.
 
 ## Contributions

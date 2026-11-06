@@ -305,6 +305,33 @@ test_slurp_functionality() {
     rm -f "$test_file"
 }
 
+# Test --indent functionality
+test_indent_functionality() {
+    print "yellow" "Testing indent functionality..."
+
+    run_test "indent 0 prints compact JSON" \
+        "echo '{\"a\":{\"b\":1}}' | bin/qq --indent 0 . | grep -qx '{\"a\":{\"b\":1}}'"
+
+    run_test "indent 4 indents JSON by 4 spaces" \
+        "echo '{\"a\":{\"b\":1}}' | bin/qq --indent 4 . | grep -q '^        \"b\": 1'"
+
+    run_test "indent 4 indents YAML by 4 spaces" \
+        "echo '{\"a\":{\"b\":1}}' | bin/qq --indent 4 -o yaml . | grep -q '^    b: 1'"
+
+    # Out-of-range width (should fail)
+    local exit_code=0
+    echo '{}' | bin/qq --indent 8 . &>/dev/null || exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        passed_tests=$((passed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "green" "  ✓ PASS: indent 8 correctly rejected"
+    else
+        failed_tests=$((failed_tests + 1))
+        total_tests=$((total_tests + 1))
+        print "red" "  ✗ FAIL: indent 8 should fail"
+    fi
+}
+
 # Test exit-status functionality
 test_exit_status_functionality() {
     print "yellow" "Testing exit-status functionality..."
@@ -385,6 +412,10 @@ main() {
 
     # Run exit-status functionality tests
     test_exit_status_functionality
+    echo
+
+    # Run indent functionality tests
+    test_indent_functionality
     echo
 
     # Get test extensions, excluding shell scripts and ini files
