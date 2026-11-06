@@ -2,6 +2,8 @@ package jsonc
 
 import (
 	"testing"
+
+	"github.com/JFryy/qq/codec/indent"
 )
 
 func TestBasicJSONCUnmarshal(t *testing.T) {
@@ -218,5 +220,33 @@ func TestJSONCEscapedQuotes(t *testing.T) {
 	}
 	if result["path"] != `C:\Users\test` {
 		t.Errorf("Path mismatch: %v", result["path"])
+	}
+}
+
+func TestJSONCMarshalIndent(t *testing.T) {
+	t.Cleanup(indent.Reset)
+
+	tests := []struct {
+		name  string
+		width int
+		want  string
+	}{
+		{"compact", 0, `{"a":{"b":1}}`},
+		{"default", indent.Default, "{\n  \"a\": {\n    \"b\": 1\n  }\n}"},
+		{"four", 4, "{\n    \"a\": {\n        \"b\": 1\n    }\n}"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := indent.Set(tt.width); err != nil {
+				t.Fatal(err)
+			}
+			got, err := (&Codec{}).Marshal(map[string]any{"a": map[string]any{"b": 1}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tt.want {
+				t.Errorf("Marshal() =\n%s\nwant\n%s", got, tt.want)
+			}
+		})
 	}
 }

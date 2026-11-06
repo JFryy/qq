@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/JFryy/qq/codec/indent"
 	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/goccy/go-json"
 )
@@ -27,7 +28,10 @@ func (c *Codec) Unmarshal(data []byte, v interface{}) error {
 // Marshal converts data to JSON format (comments are not preserved in output)
 func (c *Codec) Marshal(v interface{}) ([]byte, error) {
 	// JSONC output is just pretty-printed JSON
-	return json.MarshalIndent(v, "", "  ")
+	if indent.Width() == 0 {
+		return json.Marshal(v)
+	}
+	return json.MarshalIndent(v, "", indent.String())
 }
 
 // stripComments removes single-line (//) and multi-line (/* */) comments from JSONC

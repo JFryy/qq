@@ -156,6 +156,16 @@ func TestRootCmdFlagDefaults(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("indent", func(t *testing.T) {
+		value, err := cmd.Flags().GetInt("indent")
+		if err != nil {
+			t.Fatalf("Failed to get flag indent: %v", err)
+		}
+		if value != 2 {
+			t.Errorf("Default value for --indent = %d, expected 2", value)
+		}
+	})
 }
 
 func TestExecuteQueryBasic(t *testing.T) {

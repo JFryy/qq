@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 
+	"github.com/JFryy/qq/codec/indent"
 	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/goccy/go-json"
 )
@@ -16,12 +17,14 @@ type Codec struct{}
 
 func (c *Codec) Marshal(v any) ([]byte, error) {
 	if keyorder.Enabled() {
-		return marshalOrdered(v, "  ", false)
+		return marshalOrdered(v, indent.String(), false)
 	}
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "  ")
+	if indent.Width() > 0 {
+		encoder.SetIndent("", indent.String())
+	}
 	err := encoder.Encode(v)
 	if err != nil {
 		return nil, err
