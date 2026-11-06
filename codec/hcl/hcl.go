@@ -7,22 +7,11 @@ import (
 	"slices"
 	"time"
 
-	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/hashicorp/hcl/v2/hclwrite"
-	"github.com/tmccombs/hcl2json/convert"
 	"github.com/zclconf/go-cty/cty"
 )
 
 type Codec struct{}
-
-func (c *Codec) Unmarshal(input []byte, v any) error {
-	opts := convert.Options{}
-	content, err := convert.Bytes(input, "json", opts)
-	if err != nil {
-		return fmt.Errorf("error converting HCL to JSON: %v", err)
-	}
-	return qqjson.Unmarshal(content, v)
-}
 
 func (c *Codec) Marshal(v any) ([]byte, error) {
 	// Ensure the input is wrapped in a map if it's not already
