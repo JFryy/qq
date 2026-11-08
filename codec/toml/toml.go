@@ -1,10 +1,12 @@
 package toml
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 
 	"github.com/BurntSushi/toml"
+	"github.com/JFryy/qq/codec/util"
 )
 
 type Codec struct{}
@@ -55,6 +57,16 @@ func normalizeQueryValues(value any) any {
 // Convert whole-valued float64 values to int64 first so the TOML output
 // preserves integer typing for round-trips through type-checked TOML.
 func (c Codec) Marshal(v any) ([]byte, error) {
+	// TOML integers are 64-bit signed, so larger ones cannot be written exactly.
+	v, err := util.ReplaceBigInts(v, func(n *big.Int) (any, error) {
+		if !n.IsInt64() {
+			return nil, fmt.Errorf("integer %s is out of range for TOML (int64)", n)
+		}
+		return n.Int64(), nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	return toml.Marshal(normalizeIntegerFloats(v))
 }
 

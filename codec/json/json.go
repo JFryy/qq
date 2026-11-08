@@ -9,6 +9,7 @@ import (
 	"math"
 
 	"github.com/JFryy/qq/codec/keyorder"
+	"github.com/JFryy/qq/codec/util"
 	"github.com/goccy/go-json"
 )
 
@@ -253,7 +254,8 @@ func writeValue(buf *bytes.Buffer, v any, indent, prefix string, escapeHTML bool
 }
 
 // NormalizeNumbers replaces json.Number values with int when they are whole
-// numbers within int range, and float64 otherwise.
+// numbers within int range, *big.Int for larger integer literals, and float64
+// otherwise.
 func NormalizeNumbers(value any) (any, error) {
 	switch v := value.(type) {
 	case json.Number:
@@ -281,6 +283,10 @@ func NormalizeNumbers(value any) (any, error) {
 func normalizeNumber(n json.Number) (any, error) {
 	if i, err := n.Int64(); err == nil && i >= math.MinInt && i <= math.MaxInt {
 		return int(i), nil
+	}
+	// gojq keeps integers of any size exact, as jq does.
+	if i, ok := util.ParseInteger(n.String()); ok {
+		return util.NormalizeBigInt(i), nil
 	}
 	// Values that are not valid integers keep the previous float64 behaviour.
 	return n.Float64()

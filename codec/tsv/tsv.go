@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	qqjson "github.com/JFryy/qq/codec/json"
 	"github.com/JFryy/qq/codec/keyorder"
 	"github.com/JFryy/qq/codec/util"
 	"github.com/goccy/go-json"
@@ -103,7 +104,7 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 		return fmt.Errorf("error marshaling to JSON: %v", err)
 	}
 
-	if err := json.Unmarshal(jsonData, v); err != nil {
+	if err := qqjson.Unmarshal(jsonData, v); err != nil {
 		return fmt.Errorf("error unmarshaling JSON: %v", err)
 	}
 
