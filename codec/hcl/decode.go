@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/JFryy/qq/codec/util"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/zclconf/go-cty/cty"
@@ -49,7 +50,9 @@ func (c *Codec) Unmarshal(input []byte, v any) error {
 
 type decoder struct {
 	source []byte
-	number func(*big.Float) (any, error)
+	// number converts a numeric literal; digits is its source text when that
+	// is a plain integer, without a sign, fraction or exponent, and "" otherwise.
+	number func(n *big.Float, digits string) (any, error)
 }
 
 func (d *decoder) body(body *hclsyntax.Body) (map[string]any, error) {
@@ -114,15 +117,15 @@ func blockPath(block *hclsyntax.Block) string {
 func (d *decoder) value(expr hclsyntax.Expression) (any, error) {
 	switch e := expr.(type) {
 	case *hclsyntax.LiteralValueExpr:
-		return d.literal(e.Val)
+		return d.literal(e.Val, d.text(e.SrcRange))
 	case *hclsyntax.UnaryOpExpr:
 		// Negative numbers and negated booleans are literals in practice.
-		if _, literal := e.Val.(*hclsyntax.LiteralValueExpr); literal {
+		if operand, literal := e.Val.(*hclsyntax.LiteralValueExpr); literal {
 			result, diags := e.Value(nil)
 			if diags.HasErrors() {
 				return nil, diagnosticsError(diags)
 			}
-			return d.literal(result)
+			return d.literal(result, d.text(operand.SrcRange))
 		}
 	case *hclsyntax.TemplateWrapExpr:
 		// "${expr}" is the expression itself rather than a string.
@@ -257,7 +260,8 @@ func (d *decoder) text(r hcl.Range) string {
 	return string(d.source[r.Start.Byte:r.End.Byte])
 }
 
-func (d *decoder) literal(value cty.Value) (any, error) {
+// literal converts a literal value; text is its source text.
+func (d *decoder) literal(value cty.Value, text string) (any, error) {
 	if value.IsNull() {
 		return nil, nil
 	}
@@ -267,18 +271,30 @@ func (d *decoder) literal(value cty.Value) (any, error) {
 	case cty.Bool:
 		return value.True(), nil
 	case cty.Number:
-		return d.number(value.AsBigFloat())
+		digits := ""
+		if isIntegerLiteral(text) {
+			digits = text
+		}
+		return d.number(value.AsBigFloat(), digits)
 	default:
 		return nil, fmt.Errorf("unsupported literal of type %s", value.Type().FriendlyName())
 	}
 }
 
 // goNumber matches the JSON codec's numbers: whole numbers within int range
-// become int, others float64.
-func goNumber(n *big.Float) (any, error) {
+// become int, larger integer literals *big.Int, and others float64.
+func goNumber(n *big.Float, digits string) (any, error) {
 	if n.IsInt() {
 		if i, accuracy := n.Int64(); accuracy == big.Exact && i >= math.MinInt && i <= math.MaxInt {
 			return int(i), nil
+		}
+		// Parse the source text: n has limited precision, so long literals
+		// would lose digits.
+		if i, ok := util.ParseInteger(digits); ok {
+			if n.Sign() < 0 {
+				i.Neg(i)
+			}
+			return i, nil
 		}
 	}
 	f, _ := n.Float64()
@@ -288,8 +304,21 @@ func goNumber(n *big.Float) (any, error) {
 	return f, nil
 }
 
-func exactNumber(n *big.Float) (any, error) {
+func exactNumber(n *big.Float, _ string) (any, error) {
 	return json.Number(n.Text('f', -1)), nil
+}
+
+// isIntegerLiteral reports whether text is written as decimal digits alone.
+func isIntegerLiteral(text string) bool {
+	if text == "" {
+		return false
+	}
+	for _, r := range text {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // literalText is the text a literal contributes to a template.

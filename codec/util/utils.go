@@ -12,6 +12,9 @@ func ParseValue(value string) any {
 	if intValue, err := strconv.Atoi(value); err == nil {
 		return intValue
 	}
+	if bigValue, ok := ParseInteger(value); ok {
+		return bigValue
+	}
 	if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
 		return floatValue
 	}

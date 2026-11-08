@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
 	"time"
 
 	"github.com/JFryy/qq/codec/keyorder"
+	"github.com/JFryy/qq/codec/util"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -17,7 +20,7 @@ type Codec struct{}
 // For single-document YAML, it returns the document as-is.
 func (c Codec) Unmarshal(data []byte, v any) error {
 	if keyorder.Recording() {
-		return unmarshalRecordingOrder(data, v)
+		return unmarshalNodes(data, v)
 	}
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 
@@ -33,7 +36,7 @@ func (c Codec) Unmarshal(data []byte, v any) error {
 	err = decoder.Decode(&secondDoc)
 	if err == io.EOF {
 		// Only one document, return it directly
-		return setInterface(v, firstDoc)
+		return setInterface(data, v, firstDoc)
 	}
 	if err != nil {
 		return err
@@ -55,12 +58,13 @@ func (c Codec) Unmarshal(data []byte, v any) error {
 		docs = append(docs, doc)
 	}
 
-	return setInterface(v, docs)
+	return setInterface(data, v, docs)
 }
 
-// unmarshalRecordingOrder decodes like Unmarshal, through yaml.Node so that
-// the key order of each mapping can be recorded on the decoded maps.
-func unmarshalRecordingOrder(data []byte, v any) error {
+// unmarshalNodes decodes like Unmarshal, through yaml.Node so that integers
+// too large for uint64 can be restored and, when recording, the key order of
+// each mapping can be recorded on the decoded maps.
+func unmarshalNodes(data []byte, v any) error {
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	var docs []any
 	var nodes []*yaml.Node
@@ -91,18 +95,104 @@ func unmarshalRecordingOrder(data []byte, v any) error {
 	}
 
 	if len(nodes) == 1 {
-		err = recordKeyOrder(nodes[0], normalized)
+		normalized, err = restoreBigInts(nodes[0], normalized)
 	} else {
-		for i, doc := range normalized.([]any) {
-			if err = recordKeyOrder(nodes[i], doc); err != nil {
+		docs := normalized.([]any)
+		for i, doc := range docs {
+			if docs[i], err = restoreBigInts(nodes[i], doc); err != nil {
 				break
 			}
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("yaml: recording key order: %w", err)
+		return err
+	}
+
+	if keyorder.Recording() {
+		if len(nodes) == 1 {
+			err = recordKeyOrder(nodes[0], normalized)
+		} else {
+			for i, doc := range normalized.([]any) {
+				if err = recordKeyOrder(nodes[i], doc); err != nil {
+					break
+				}
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("yaml: recording key order: %w", err)
+		}
 	}
 	return assign(v, normalized)
+}
+
+// restoreBigInts returns value with floats that were decoded from plain
+// integer scalars replaced by exact integers. The YAML decoder resolves
+// integers that overflow uint64 as floats. node is the node value was decoded
+// and normalized from.
+func restoreBigInts(node *yaml.Node, value any) (any, error) {
+	node = resolveNode(node)
+	switch node.Kind {
+	case yaml.MappingNode:
+		m, ok := value.(map[string]any)
+		if !ok {
+			return value, nil
+		}
+		keys, values, err := mappingEntries(node)
+		if err != nil {
+			return nil, err
+		}
+		for i, key := range keys {
+			item, ok := m[key]
+			if !ok {
+				continue
+			}
+			if m[key], err = restoreBigInts(values[i], item); err != nil {
+				return nil, err
+			}
+		}
+	case yaml.SequenceNode:
+		items, ok := value.([]any)
+		if !ok || len(items) != len(node.Content) {
+			return value, nil
+		}
+		for i, item := range items {
+			restored, err := restoreBigInts(node.Content[i], item)
+			if err != nil {
+				return nil, err
+			}
+			items[i] = restored
+		}
+	case yaml.ScalarNode:
+		// A plain, untagged scalar: an explicit !!float tag keeps the float.
+		if _, isFloat := value.(float64); isFloat && node.Style == 0 {
+			if n, ok := util.ParseInteger(node.Value); ok {
+				return util.NormalizeBigInt(n), nil
+			}
+		}
+	}
+	return value, nil
+}
+
+// hasLargeWholeFloat reports whether value holds a whole float64 outside the
+// int64 range, which may have been decoded from an integer literal.
+func hasLargeWholeFloat(value any) bool {
+	switch v := value.(type) {
+	case float64:
+		return math.Abs(v) >= 1<<63 && !math.IsInf(v, 0) && v == math.Trunc(v)
+	case map[string]any:
+		for _, item := range v {
+			if hasLargeWholeFloat(item) {
+				return true
+			}
+		}
+	case []any:
+		for _, item := range v {
+			if hasLargeWholeFloat(item) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // recordKeyOrder records the key order of each mapping in node on the matching
@@ -220,12 +310,16 @@ func nodeKey(node *yaml.Node) (string, error) {
 	return mapKey(key), nil
 }
 
-// setInterface sets the value of v to val
-func setInterface(v any, val any) error {
+// setInterface sets the value of v to val, decoded from data
+func setInterface(data []byte, v any, val any) error {
 	// Normalize types to be compatible with gojq/JSON
 	normalized, err := normalizeTypes(val)
 	if err != nil {
 		return err
+	}
+	if hasLargeWholeFloat(normalized) {
+		// Decode again through nodes to tell integer literals from floats.
+		return unmarshalNodes(data, v)
 	}
 	return assign(v, normalized)
 }
@@ -262,10 +356,7 @@ func normalizeTypes(val any) (any, error) {
 	case uint32:
 		return int(v), nil
 	case uint64:
-		if v <= 9007199254740992 { // Max safe integer in JSON (2^53)
-			return int(v), nil
-		}
-		return float64(v), nil
+		return util.NormalizeNumbers(v), nil
 	case map[string]any:
 		result := make(map[string]any, len(v))
 		for key, value := range v {
@@ -379,6 +470,14 @@ func marshalIndent(v any) ([]byte, error) {
 			return nil, err
 		}
 		v = node
+	} else {
+		var err error
+		v, err = util.ReplaceBigInts(v, func(n *big.Int) (any, error) {
+			return bigIntNode(n), nil
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
@@ -423,10 +522,19 @@ func orderedNode(v any) (*yaml.Node, error) {
 			node.Content = append(node.Content, itemNode)
 		}
 		return node, nil
+	case *big.Int:
+		return bigIntNode(val), nil
 	}
 	node := &yaml.Node{}
 	if err := node.Encode(v); err != nil {
 		return nil, err
 	}
 	return node, nil
+}
+
+// bigIntNode returns a plain scalar for n. The encoder would otherwise quote
+// it as a string, and an explicit !!int tag would be added for values beyond
+// uint64, which the decoder resolves as floats.
+func bigIntNode(n *big.Int) *yaml.Node {
+	return &yaml.Node{Kind: yaml.ScalarNode, Value: n.String()}
 }

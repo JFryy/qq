@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"math"
+	"math/big"
 	"slices"
 	"time"
 
@@ -135,6 +136,8 @@ func (c *Codec) convertToCtyValue(value any) (cty.Value, error) {
 		return cty.NumberUIntVal(uint64(v)), nil
 	case uint64:
 		return cty.NumberUIntVal(v), nil
+	case *big.Int:
+		return cty.NumberVal(new(big.Float).SetInt(v)), nil
 	case float32:
 		return c.convertToCtyValue(float64(v))
 	case float64:

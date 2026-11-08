@@ -3,6 +3,7 @@ package hcl
 import (
 	"encoding/json"
 	"math"
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
@@ -28,9 +29,10 @@ func TestUnmarshalValues(t *testing.T) {
 		},
 		{
 			name:   "numbers at the int64 boundary",
-			source: "max = 9223372036854775807\nmin = -9223372036854775808\nover = 9223372036854775808\nwhole_float = 2.0\nfraction = 0.1\n",
+			source: "max = 9223372036854775807\nmin = -9223372036854775808\nover = 9223372036854775808\nunder = -9223372036854775809\nwhole_float = 2.0\nfraction = 0.1\nexponent = 1e19\n",
 			want: map[string]any{
-				"max": math.MaxInt64, "min": math.MinInt64, "over": 9223372036854775808.0, "whole_float": 2, "fraction": 0.1,
+				"max": math.MaxInt64, "min": math.MinInt64, "over": new(big.Int).SetUint64(1 << 63),
+				"under": new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)), "whole_float": 2, "fraction": 0.1, "exponent": 1e19,
 			},
 		},
 		{
