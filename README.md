@@ -79,6 +79,11 @@ qq -k '.spec' deployment.yaml -o json
 echo '{"active":true}' | qq -e '.active' && echo "is active"
 ```
 
+Queries that return `null` print the selected format's null representation and
+succeed, including with `-r`. With `-e`, a final `null` result is still printed
+but sets exit status 1. Formats that cannot represent the result report an
+encoding error.
+
 ## Git
 
 You can also use it for cleaner diffing of configuration files by adding to your `git/config` file a snippet such as

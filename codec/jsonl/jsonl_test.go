@@ -150,6 +150,19 @@ func TestJSONLInvalidJSON(t *testing.T) {
 	}
 }
 
+func TestJSONLMarshalNull(t *testing.T) {
+	codec := &Codec{}
+	for _, value := range []any{nil, []any{nil}} {
+		data, err := codec.Marshal(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(data) != "null\n" {
+			t.Errorf("Marshal(%#v) = %q, want %q", value, data, "null\n")
+		}
+	}
+}
+
 func TestJSONLSingleObject(t *testing.T) {
 	singleObj := map[string]any{
 		"name": "Alice",

@@ -35,6 +35,9 @@ func (c *Codec) Unmarshal(data []byte, v interface{}) error {
 
 // Marshal converts data back to properties file format
 func (c *Codec) Marshal(v interface{}) ([]byte, error) {
+	if v == nil {
+		return nil, errors.New("properties format cannot encode null")
+	}
 	// Convert to our expected format first
 	data, err := json.Marshal(v)
 	if err != nil {

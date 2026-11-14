@@ -1,6 +1,7 @@
 package toml
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 
@@ -55,6 +56,9 @@ func normalizeQueryValues(value any) any {
 // Convert whole-valued float64 values to int64 first so the TOML output
 // preserves integer typing for round-trips through type-checked TOML.
 func (c Codec) Marshal(v any) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("toml: cannot encode null")
+	}
 	return toml.Marshal(normalizeIntegerFloats(v))
 }
 

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/JFryy/qq/codec"
+	"github.com/itchyny/gojq"
 )
 
 func TestInferFileType(t *testing.T) {
@@ -258,5 +259,94 @@ func TestHelpFlag(t *testing.T) {
 	// Should have the basic flags
 	if !strings.Contains(helpText, "input") || !strings.Contains(helpText, "output") {
 		t.Error("Help text should mention input/output flags")
+	}
+}
+
+func TestExecuteQueryNullResult(t *testing.T) {
+	tests := []struct {
+		name       string
+		query      string
+		format     codec.EncodingType
+		rawOut     bool
+		exitStatus bool
+		wantExit   int
+		wantOutput string
+	}{
+		{
+			name:       "json missing key",
+			query:      ".missing",
+			format:     codec.JSON,
+			wantExit:   0,
+			wantOutput: "null",
+		},
+		{
+			name:       "json literal null",
+			query:      "null",
+			format:     codec.JSON,
+			wantExit:   0,
+			wantOutput: "null",
+		},
+		{
+			name:       "json raw null",
+			query:      ".missing",
+			format:     codec.JSON,
+			rawOut:     true,
+			wantExit:   0,
+			wantOutput: "null",
+		},
+		{
+			name:       "json exit status on null",
+			query:      ".missing",
+			format:     codec.JSON,
+			exitStatus: true,
+			wantExit:   1,
+			wantOutput: "null",
+		},
+		{
+			name:       "yaml missing key",
+			query:      ".missing",
+			format:     codec.YAML,
+			wantExit:   0,
+			wantOutput: "null",
+		},
+		{
+			name:       "jsonl missing key",
+			query:      ".missing",
+			format:     codec.JSONL,
+			wantExit:   0,
+			wantOutput: "null",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q, err := gojq.Parse(tt.query)
+			if err != nil {
+				t.Fatalf("failed to parse query %q: %v", tt.query, err)
+			}
+
+			old := os.Stdout
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("failed to pipe stdout: %v", err)
+			}
+			os.Stdout = w
+
+			gotExit := executeQuery(q, map[string]any{}, tt.format, tt.rawOut, true, tt.exitStatus)
+
+			_ = w.Close()
+			os.Stdout = old
+
+			var buf bytes.Buffer
+			_, _ = io.Copy(&buf, r)
+			gotOutput := strings.TrimSpace(buf.String())
+
+			if gotExit != tt.wantExit {
+				t.Errorf("executeQuery exit = %d, want %d (output=%q)", gotExit, tt.wantExit, gotOutput)
+			}
+			if gotOutput != tt.wantOutput {
+				t.Errorf("executeQuery output = %q, want %q", gotOutput, tt.wantOutput)
+			}
+		})
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	qqjson "github.com/JFryy/qq/codec/json"
@@ -109,7 +110,16 @@ func lineItems(v any) ([]any, error) {
 		return nil, err
 	}
 	items, ok := decoded.([]any)
-	if !ok && decoded != nil {
+	if !ok {
+		// A typed nil slice marshals to JSON null, which would otherwise be
+		// treated as a single null item. Treat nil slices as empty arrays so
+		// -k (key-preserved path returns slices directly) and the default path
+		// produce the same number of JSONL records.
+		if decoded == nil && v != nil {
+			if rv := reflect.ValueOf(v); rv.Kind() == reflect.Slice && rv.IsNil() {
+				return nil, nil
+			}
+		}
 		items = []any{decoded}
 	}
 	return items, nil
