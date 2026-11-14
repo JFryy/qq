@@ -182,9 +182,6 @@ func Unmarshal(input []byte, inputFileType EncodingType, data any) error {
 }
 
 func Marshal(v any, outputFileType EncodingType) ([]byte, error) {
-	if v == nil {
-		return nil, fmt.Errorf("input data cannot be nil")
-	}
 	codec, ok := Codecs[outputFileType]
 	if !ok {
 		return nil, fmt.Errorf("unsupported output file type: %v", outputFileType)

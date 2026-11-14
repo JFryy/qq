@@ -67,6 +67,50 @@ func TestMarshal(t *testing.T) {
 	}
 }
 
+func TestMarshalNull(t *testing.T) {
+	tests := []struct {
+		format  EncodingType
+		want    string
+		wantErr bool
+	}{
+		{JSON, "null", false},
+		{JSONC, "null", false},
+		{JSONL, "null\n", false},
+		{YAML, "null\n", false},
+		{BASE64, "bnVsbA==", false},
+		{LINE, "null", false},
+		{TXT, "null", false},
+		{PROTO, "null", false},
+		{MSGPACK, "\xc0", false},
+		{CBOR, "\xf6", false},
+		{TOML, "", true},
+		{ENV, "", true},
+		{PROPERTIES, "", true},
+		{CSV, "", true},
+		{TSV, "", true},
+		{INI, "", true},
+		{AVRO, "", true},
+		{PARQUET, "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.format.String(), func(t *testing.T) {
+			got, err := Marshal(nil, tt.format)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error marshaling nil for %v, got %q", tt.format, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestUnmarshal(t *testing.T) {
 	jsonData := `{"key": "value"}`
 	xmlData := `<root><key>value</key></root>`
@@ -121,6 +165,12 @@ func TestPrettyFormatRawOutput(t *testing.T) {
 		fileType EncodingType
 		expected string
 	}{
+		{
+			name:     "null should stay unchanged",
+			input:    `null`,
+			fileType: JSON,
+			expected: "null",
+		},
 		{
 			name:     "string with tab escape sequence",
 			input:    `"string_1\tsecond string"`,

@@ -205,6 +205,27 @@ test_gojq_functionality() {
         "echo '5' | bin/qq 'if . > 3 then \"big\" else \"small\" end' | grep -q 'big'"
 
     # Null handling
+    run_test "missing key produces null" \
+        "echo '{}' | bin/qq '.missing' | grep -qx 'null'"
+
+    run_test "literal null" \
+        "echo '{}' | bin/qq 'null' | grep -qx 'null'"
+
+    run_test "optional missing key produces null" \
+        "echo '{}' | bin/qq '.missing?' | grep -qx 'null'"
+
+    run_test "null fallback" \
+        "echo '{}' | bin/qq '.a // null' | grep -qx 'null'"
+
+    run_test "raw null" \
+        "echo '{}' | bin/qq -r '.missing' | grep -qx 'null'"
+
+    run_test "YAML null" \
+        "echo '{}' | bin/qq -o yaml '.missing' | grep -q '^null$'"
+
+    run_test "JSONL null" \
+        "echo '{}' | bin/qq -o jsonl '.missing' | grep -q '^null$'"
+
     run_test "null coalescing" \
         "echo '{\"a\":null}' | bin/qq '.a // \"default\"' | grep -q 'default'"
 

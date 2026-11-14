@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -204,5 +207,71 @@ func TestPreserveKeyOrderRejectsTrailingJSON(t *testing.T) {
 	var data any
 	if err := codec.Unmarshal([]byte(`{"z":1} {"a":2}`), codec.JSON, &data); err == nil {
 		t.Fatal("expected an error for trailing JSON input")
+	}
+}
+func TestPreserveKeyOrderEmptySlurpJSONL(t *testing.T) {
+	tests := []struct {
+		name       string
+		rawOut     bool
+		exitStatus bool
+		wantExit   int
+	}{
+		{name: "plain", wantExit: 0},
+		{name: "raw", rawOut: true, wantExit: 0},
+		{name: "exit-status", exitStatus: true, wantExit: 0},
+	}
+
+	for _, tt := range tests {
+		for _, preserveKeyOrder := range []bool{false, true} {
+			name := tt.name
+			if preserveKeyOrder {
+				name += "/with-k"
+			} else {
+				name += "/without-k"
+			}
+			t.Run(name, func(t *testing.T) {
+				if preserveKeyOrder {
+					keyorder.Enable()
+					t.Cleanup(keyorder.Disable)
+				} else {
+					keyorder.Disable()
+				}
+
+				data, err := slurpInputs([]byte(""), codec.JSON)
+				if err != nil {
+					t.Fatalf("slurpInputs: %v", err)
+				}
+				keyorder.StopRecording()
+
+				q, err := gojq.Parse(".")
+				if err != nil {
+					t.Fatalf("parse query: %v", err)
+				}
+
+				old := os.Stdout
+				r, w, err := os.Pipe()
+				if err != nil {
+					t.Fatalf("pipe: %v", err)
+				}
+				os.Stdout = w
+
+				gotExit := executeQuery(q, data, codec.JSONL, tt.rawOut, true, tt.exitStatus)
+
+				_ = w.Close()
+				os.Stdout = old
+
+				var buf bytes.Buffer
+				_, _ = io.Copy(&buf, r)
+
+				// Empty slurped input is a typed nil slice; JSONL encoding must
+				// emit zero records regardless of -k, -r, or -e.
+				if got := buf.String(); got != "\n" {
+					t.Errorf("output = %q, want %q", got, "\n")
+				}
+				if gotExit != tt.wantExit {
+					t.Errorf("exit = %d, want %d", gotExit, tt.wantExit)
+				}
+			})
+		}
 	}
 }
